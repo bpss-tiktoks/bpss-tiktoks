@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bpss TikToks - Descarga sin marca de agua</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+<h1>Bpss TikToks</h1>
+<p class="sub">Descarga videos y audios sin marca de agua - Alta calidad</p>
+<form method="POST">
+<input type="text" name="url" placeholder="https://www.tiktok.com/@user/video/..." required>
+<div class="btns">
+<button type="submit" name="type" value="video"> Video</button>
+<button type="submit" name="type" value="audio"> Audio (MP3)</button>
+</div>
+</form>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if file_path %}
+<div class="result">
+<p>Listo para descargar</p>
+<a href="/download/{{ file_path }}" class="btn"> Descargar</a>
+</div>
+{% endif %}
+</div>
+</body>
+</html>
