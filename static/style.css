@@ -1,9 +1,9 @@
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,sans-serif;background:#0f0f13;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
-.container{text-align:center;padding:2rem;max-width:480px;width:100%}
-.logo{width:64px;height:64px;margin:0 auto 1rem;display:block;border-radius:12px}
+body{font-family:system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;background:url('/static/logo.png') center/cover no-repeat fixed;position:relative}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:0}
+.container{position:relative;z-index:1;text-align:center;padding:2rem;max-width:480px;width:100%;background:rgba(15,15,19,.85);border-radius:16px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08)}
 h1{font-size:1.8rem;margin-bottom:.3rem;background:linear-gradient(135deg,#fe2c55,#833ab4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.sub{color:#888;margin-bottom:1.5rem;font-size:.85rem}
+.sub{color:#aaa;margin-bottom:1.5rem;font-size:.85rem}
 form input[type=text]{width:100%;padding:.8rem 1rem;border:1px solid #333;border-radius:10px;background:#1a1a2e;color:#fff;font-size:.9rem;margin-bottom:.8rem}
 form input:focus{outline:none;border-color:#fe2c55}
 .btns{display:flex;gap:.5rem}
@@ -14,4 +14,4 @@ button:hover{opacity:.85}
 .result{margin-top:1.2rem;padding:1.2rem;background:#1b2d1b;border:1px solid #4caf50;border-radius:10px}
 .btn{display:inline-block;margin-top:.6rem;padding:.7rem 1.8rem;background:#4caf50;color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:.9rem;transition:background .2s}
 .btn:hover{background:#43a047}
-@media(max-width:480px){.container{padding:1.5rem 1rem}h1{font-size:1.5rem}.logo{width:56px;height:56px}button{padding:.7rem .8rem;font-size:.8rem}}   
+@media(max-width:480px){.container{padding:1.5rem 1rem}h1{font-size:1.5rem}button{padding:.7rem .8rem;font-size:.8rem}}   
