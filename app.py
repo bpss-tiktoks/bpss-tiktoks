@@ -1,11 +1,23 @@
 ﻿from flask import Flask, render_template, request, send_file
-import yt_dlp, os, uuid
+import yt_dlp, os, urllib.request
 
 app = Flask(__name__)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+def resolve_short_url(url):
+    if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
+        try:
+            req = urllib.request.Request(url, method='HEAD')
+            req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
+            resp = urllib.request.urlopen(req, timeout=10)
+            return resp.url
+        except Exception:
+            pass
+    return url
+
 def download_video(url):
+    url = resolve_short_url(url)
     opts = {
         'quiet': True,
         'no_warnings': True,
@@ -13,12 +25,17 @@ def download_video(url):
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
         'noplaylist': True,
         'merge_output_format': 'mp4',
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+        },
+        'impersonate': 'chrome',
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
         return ydl.prepare_filename(info)
 
 def download_audio(url):
+    url = resolve_short_url(url)
     opts = {
         'quiet': True,
         'no_warnings': True,
@@ -30,6 +47,10 @@ def download_audio(url):
             'preferredcodec': 'mp3',
             'preferredquality': '0',
         }],
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+        },
+        'impersonate': 'chrome',
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
