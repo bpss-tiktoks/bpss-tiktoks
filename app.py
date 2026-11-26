@@ -9,7 +9,6 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 GROQ_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
-
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 req_log = defaultdict(list)
 
@@ -23,6 +22,16 @@ def rate_limit():
     return True
 
 tasks = {}
+
+def auto_cleanup():
+    now = time.time()
+    try:
+        for f in os.listdir(DOWNLOAD_DIR):
+            fpath = os.path.join(DOWNLOAD_DIR, f)
+            if os.path.isfile(fpath) and now - os.path.getmtime(fpath) > 3600:
+                os.remove(fpath)
+    except Exception:
+        pass
 
 def resolve_short_url(url):
     if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
@@ -59,7 +68,10 @@ def do_download(task_id, url, dtype):
             fname = os.path.basename(ydl.prepare_filename(info))
             tasks[task_id] = {'status': 'done', 'file': fname, 'error': None}
     except Exception as e:
-        tasks[task_id] = {'status': 'error', 'file': None, 'error': str(e)[:500]}
+        err_msg = str(e)[:500]
+        if '10231' in err_msg or '10204' in err_msg:
+            err_msg = 'Video no disponible en la region del servidor. Prueba con otro video.'
+        tasks[task_id] = {'status': 'error', 'file': None, 'error': err_msg}
 
 SYSTEM_PROMPT = "Eres un asistente inteligente y util. Puedes conversar sobre cualquier tema, resolver problemas tecnicos, explicar conceptos, ayudar con programacion, y tambien ayudar con la web de Bpss TikToks (descarga de videos de TikTok, Instagram y Facebook). Si el usuario tiene un problema con la web, explicale la solucion. Responde siempre en espanol, de forma clara y directa."
 
@@ -97,6 +109,7 @@ def index():
             elif not any(d in url for d in ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch']):
                 error = 'URL no valida (TikTok, Instagram o Facebook)'
             else:
+                auto_cleanup()
                 task_id = str(uuid.uuid4())[:8]
                 tasks[task_id] = {'status': 'processing', 'file': None, 'error': None}
                 t = threading.Thread(target=do_download, args=(task_id, url, dtype))

@@ -4,16 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bpss TikToks - Descarga sin marca de agua</title>
-<meta name="description" content="Descarga videos y audios de TikTok e Instagram sin marca de agua. Gratis.">
+<meta name="description" content="Descarga videos y audios de TikTok, Instagram y Facebook sin marca de agua. Gratis.">
+<meta property="og:title" content="Bpss TikToks">
+<meta property="og:description" content="Descarga videos y audios de TikTok, Instagram y Facebook sin marca de agua. Gratis.">
+<meta property="og:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
+<meta property="og:url" content="https://bpss-tiktoks.onrender.com">
+<meta property="og:type" content="website">
 <link rel="icon" href="/static/logo.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<button class="theme-toggle" id="themeToggle" title="Cambiar tema">&#9789;</button>
 <div class="container">
 <h1>Bpss TikToks</h1>
-<p class="sub">TikTok - Instagram | Sin marca de agua</p>
+<p class="sub">TikTok - Instagram - Facebook | Sin marca de agua</p>
+<p class="counter" id="counter"></p>
 <form method="POST" id="dlForm">
-<input type="text" name="url" id="urlInput" placeholder="Pega una URL de TikTok o Instagram..." required>
+<input type="text" name="url" id="urlInput" placeholder="Pega una URL de TikTok, Instagram o Facebook..." required>
 <div class="btns">
 <button type="submit" name="type" value="video">Video</button>
 <button type="submit" name="type" value="audio">Audio</button>
@@ -31,6 +38,31 @@
 </div>
 </div>
 <script>
+var isDark = localStorage.getItem('bpss_dark') === '1';
+function applyTheme(){
+  document.body.classList.toggle('dark', isDark);
+  document.getElementById('themeToggle').textContent = isDark ? '\u2600\uFE0F' : '\u263E\uFE0F';
+}
+applyTheme();
+document.getElementById('themeToggle').onclick = function(){
+  isDark = !isDark;
+  localStorage.setItem('bpss_dark', isDark ? '1' : '0');
+  applyTheme();
+};
+var dlCount = parseInt(localStorage.getItem('bpss_dl_count') || '0');
+document.getElementById('counter').textContent = dlCount > 0 ? dlCount + ' descargas' : '';
+window.addEventListener('DOMContentLoaded',function(){
+var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
+if(h.length)document.getElementById('history').innerHTML='<hr style="margin:1rem 0;border:none;border-top:1px solid #eee"><p style="font-size:.7rem;color:#999">Recientes</p>'+h.slice(0,3).map(function(u){return '<p style="font-size:.65rem;color:#aaa;word-break:break-all;margin:.2rem 0">'+u+'</p>'}).join('');
+});
+document.getElementById('dlForm').addEventListener('submit',function(){
+var u=document.getElementById('urlInput').value;
+if(u){
+var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
+h.unshift(u);
+localStorage.setItem('bpss_h',JSON.stringify(h.slice(0,10)));
+}
+});
 var chatHistory=[];
 function addMsg(who,text){
 var d=document.createElement('div');
@@ -56,14 +88,6 @@ chatHistory.push({role:'assistant',content:d.reply});
 }
 document.getElementById('chatSend').onclick=sendChat;
 document.getElementById('chatInput').onkeydown=function(e){if(e.key==='Enter')sendChat()};
-window.addEventListener('DOMContentLoaded',function(){
-var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
-if(h.length)document.getElementById('history').innerHTML='<hr style="margin:1rem 0;border:none;border-top:1px solid #eee"><p style="font-size:.7rem;color:#999">Recientes</p>'+h.slice(0,5).map(function(u){return '<p style="font-size:.65rem;color:#aaa;word-break:break-all;margin:.2rem 0">'+u+'</p>'}).join('');
-});
-document.getElementById('dlForm').addEventListener('submit',function(){
-var u=document.getElementById('urlInput').value;
-if(u){var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');h.unshift(u);localStorage.setItem('bpss_h',JSON.stringify(h.slice(0,10)));}
-});
 </script>
 </body>
 </html>
