@@ -134,8 +134,7 @@ def chat():
 
 @app.route('/google110a1e6092696f4d.html')
 def google_verify():
-    return send_file(os.path.join(BASE, 'static', 'google110a1e6092696f4d.html'))
+    return "google-site-verification: google110a1e6092696f4d.html", 200, {'Content-Type': 'text/plain'}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
