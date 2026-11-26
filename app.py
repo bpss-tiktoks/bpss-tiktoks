@@ -1,153 +1,121 @@
-﻿from flask import Flask, render_template, request, send_file, redirect, jsonify
-import yt_dlp, os, urllib.request, time, threading, json, uuid, requests
-from collections import defaultdict
+﻿import os
+import shutil
+import subprocess
+from pathlib import Path
+
+from flask import Flask, request, jsonify, render_template_string, send_from_directory
+
+BASE_DIR = Path(__file__).parent
+DOWNLOADS_DIR = BASE_DIR / "downloads"
+DOWNLOADS_DIR.mkdir(exist_ok=True)
+
+YTDLP = shutil.which("yt-dlp") or "yt-dlp"
+GALLERY_DL = shutil.which("gallery-dl") or "gallery-dl"
+FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
+
+COOKIES_FILE = BASE_DIR / "cookies.txt"
+COOKIES_ARGS = ["--cookies", str(COOKIES_FILE)] if COOKIES_FILE.exists() else []
 
 app = Flask(__name__)
-BASE = os.path.dirname(os.path.abspath(__file__))
-DOWNLOAD_DIR = os.path.join(BASE, 'downloads')
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-GROQ_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
-UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-req_log = defaultdict(list)
+def check_deps():
+    missing = []
+    if not shutil.which("yt-dlp"): missing.append("yt-dlp")
+    if not shutil.which("gallery-dl"): missing.append("gallery-dl")
+    if not shutil.which("ffmpeg"): missing.append("ffmpeg")
+    return missing
 
-def rate_limit():
-    ip = request.remote_addr
-    now = time.time()
-    req_log[ip] = [t for t in req_log[ip] if now - t < 60]
-    if len(req_log[ip]) >= 5:
-        return False
-    req_log[ip].append(now)
-    return True
-
-tasks = {}
-
-def auto_cleanup():
-    now = time.time()
+def _run(cmd, timeout=300):
     try:
-        for f in os.listdir(DOWNLOAD_DIR):
-            fpath = os.path.join(DOWNLOAD_DIR, f)
-            if os.path.isfile(fpath) and now - os.path.getmtime(fpath) > 3600:
-                os.remove(fpath)
-    except Exception:
-        pass
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"Timeout ({timeout}s)")
+    except FileNotFoundError:
+        raise RuntimeError(f"No se encontro: {cmd[0]}")
 
-def resolve_short_url(url):
-    if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
-        try:
-            req = urllib.request.Request(url)
-            req.add_header('User-Agent', UA)
-            resp = urllib.request.urlopen(req, timeout=10)
-            return resp.url
-        except Exception:
-            pass
-    return url
+def _is_live(url): return "/live" in url
+def _is_photo(url): return "/photo/" in url
 
-def do_download(task_id, url, dtype):
-    try:
-        url = resolve_short_url(url)
-        if dtype == 'audio':
-            opts = {
-                'quiet': True, 'no_warnings': True,
-                'format': 'bestaudio/best',
-                'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
-                'noplaylist': True,
-                'http_headers': {'User-Agent': UA},
-            }
-        else:
-            opts = {
-                'quiet': True, 'no_warnings': True,
-                'format': 'best/best',
-                'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
-                'noplaylist': True,
-                'http_headers': {'User-Agent': UA},
-            }
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            fname = os.path.basename(ydl.prepare_filename(info))
-            tasks[task_id] = {'status': 'done', 'file': fname, 'error': None}
-    except Exception as e:
-        err_msg = str(e)[:500]
-        if '10231' in err_msg or '10204' in err_msg:
-            err_msg = 'Video no disponible en la region del servidor. Prueba con otro video.'
-        tasks[task_id] = {'status': 'error', 'file': None, 'error': err_msg}
+def download_video(url, out_dir):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [YTDLP, "--impersonate", "chrome", "-f", "b", "--no-playlist", *COOKIES_ARGS,
+           "-o", str(out_dir / "%(id)s.%(ext)s"), url]
+    r = _run(cmd, timeout=300)
+    if r.returncode != 0:
+        raise RuntimeError(f"yt-dlp: {r.stderr.strip()[:200]}")
+    files = list(out_dir.glob("*.mp4"))
+    if not files: raise RuntimeError("No se genero MP4")
+    return {"type": "video", "file": files[0].name}
 
-SYSTEM_PROMPT = "Eres un asistente inteligente y util. Puedes conversar sobre cualquier tema, resolver problemas tecnicos, explicar conceptos, ayudar con programacion, y tambien ayudar con la web de Bpss TikToks (descarga de videos de TikTok, Instagram y Facebook). Si el usuario tiene un problema con la web, explicale la solucion. Responde siempre en espanol, de forma clara y directa."
+def download_live(url, out_dir):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [YTDLP, "--impersonate", "chrome", "-f", "b", "--no-playlist",
+           "--wait-for-video", "120", *COOKIES_ARGS,
+           "-o", str(out_dir / "%(id)s_live.%(ext)s"), url]
+    r = _run(cmd, timeout=7200)
+    if r.returncode != 0:
+        raise RuntimeError(f"Live: {r.stderr.strip()[:200]}")
+    files = list(out_dir.glob("*live*.mp4"))
+    if not files: raise RuntimeError("No se grabo la live")
+    return {"type": "live", "file": files[0].name}
 
-def chat_with_groq(messages):
-    if not GROQ_KEY:
-        return 'El chatbot no esta configurado. Pega la URL en el formulario de arriba.'
-    try:
-        all_msgs = [{'role': 'system', 'content': SYSTEM_PROMPT}]
-        for m in messages:
-            all_msgs.append({'role': m['role'], 'content': m['content']})
-        r = requests.post(GROQ_URL, headers={
-            'Authorization': 'Bearer ' + GROQ_KEY,
-            'Content-Type': 'application/json'
-        }, json={
-            'model': 'openai/gpt-oss-20b',
-            'messages': all_msgs,
-            'max_tokens': 500,
-            'temperature': 0.7,
-        }, timeout=30)
-        return r.json()['choices'][0]['message']['content']
-    except Exception as e:
-        return f'Error del chatbot: {str(e)[:200]}'
+def download_photo(url, out_dir):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    img_dir = out_dir / "imgs"
+    img_dir.mkdir(exist_ok=True)
+    cmd_img = [GALLERY_DL, "-d", str(img_dir), "-o", 'directory=["{id}"]',
+               "-o", "videos=false", "--no-skip", url]
+    r_img = _run(cmd_img, timeout=120)
+    if r_img.returncode != 0:
+        raise RuntimeError(f"gallery-dl: {r_img.stderr.strip()[:200]}")
+    imgs = [f for f in img_dir.rglob("*") if f.suffix.lower() in (".jpg",".jpeg",".png",".webp")]
+    if not imgs: raise RuntimeError("No se encontraron imagenes")
+    img_names = []
+    for i, img in enumerate(sorted(imgs), 1):
+        dest = out_dir / f"img_{i:02d}{img.suffix.lower()}"
+        shutil.copy2(img, dest)
+        img_names.append(dest.name)
+    cmd_audio = [YTDLP, "--impersonate", "chrome", "-x", "--audio-format", "mp3",
+                 "--audio-quality", "0", "--no-playlist", *COOKIES_ARGS,
+                 "-o", str(out_dir / "%(id)s_audio.%(ext)s"), url]
+    r_audio = _run(cmd_audio, timeout=60)
+    audio = None
+    if r_audio.returncode == 0:
+        mp3s = list(out_dir.glob("*audio*.mp3"))
+        if mp3s: audio = mp3s[0].name
+    return {"type": "photo_post", "images": img_names, "audio": audio, "image_count": len(img_names)}
 
-@app.route('/', methods=['GET', 'POST'])
+def download_tiktok(url):
+    out_dir = DOWNLOADS_DIR / "latest"
+    if out_dir.exists(): shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True)
+    if _is_live(url): return download_live(url, out_dir)
+    elif _is_photo(url): return download_photo(url, out_dir)
+    else: return download_video(url, out_dir)
+
+@app.route("/")
 def index():
-    error = None
-    if request.method == 'POST':
-        if not rate_limit():
-            error = 'Demasiadas peticiones. Espera 1 min.'
-        else:
-            url = request.form.get('url', '').strip()
-            dtype = request.form.get('type', 'video')
-            if not url:
-                error = 'Pega una URL'
-            elif not any(d in url for d in ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch']):
-                error = 'URL no valida (TikTok, Instagram o Facebook)'
-            else:
-                auto_cleanup()
-                task_id = str(uuid.uuid4())[:8]
-                tasks[task_id] = {'status': 'processing', 'file': None, 'error': None}
-                t = threading.Thread(target=do_download, args=(task_id, url, dtype))
-                t.daemon = True
-                t.start()
-                return redirect('/status/' + task_id)
-    return render_template('index.html', error=error)
+    return render_template_string(open(BASE_DIR / "templates" / "index.html", encoding="utf-8").read())
 
-@app.route('/status/<task_id>')
-def status(task_id):
-    return render_template('status.html', task_id=task_id)
+@app.route("/download", methods=["POST"])
+def handle_download():
+    missing = check_deps()
+    if missing:
+        return jsonify({"error": f"Faltan: {', '.join(missing)}"}), 500
+    url = (request.json or {}).get("url", "").strip()
+    if not url or not url.startswith("http"):
+        return jsonify({"error": "URL invalida"}), 400
+    try:
+        result = download_tiktok(url)
+        return jsonify({"success": True, "data": result})
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": f"Error: {e}"}), 500
 
-@app.route('/api/status/<task_id>')
-def api_status(task_id):
-    t = tasks.get(task_id, {'status': 'error', 'file': None, 'error': 'No encontrado'})
-    return json.dumps(t)
+@app.route("/files/<path:filename>")
+def serve_file(filename):
+    return send_from_directory(str(DOWNLOADS_DIR / "latest"), filename)
 
-@app.route('/download/<path:filename>')
-def download(filename):
-    safe = os.path.basename(filename)
-    fpath = os.path.join(DOWNLOAD_DIR, safe)
-    if not os.path.exists(fpath):
-        return 'Archivo no encontrado', 404
-    return send_file(fpath, as_attachment=True)
-
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    data = request.get_json()
-    user_msg = data.get('message', '')
-    history = data.get('history', [])
-    messages = history[-6:]
-    messages.append({'role': 'user', 'content': user_msg})
-    reply = chat_with_groq(messages)
-    return jsonify({'reply': reply})
-
-@app.route('/google110a1e6092696f4d.html')
-def google_verify():
-    return "google-site-verification: google110a1e6092696f4d.html", 200, {'Content-Type': 'text/plain'}
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
