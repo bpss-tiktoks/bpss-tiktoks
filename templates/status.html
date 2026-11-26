@@ -19,7 +19,7 @@ var id='{{ task_id }}';
 var tries=0;
 function check(){
 tries++;
-if(tries>60){
+if(tries>90){
 document.getElementById('msg').innerHTML='<p style="color:#c0392b;font-size:.8rem">Timeout. Intentalo de nuevo.</p><a href="/" style="display:inline-block;margin-top:.6rem;color:#fe2c55;font-size:.8rem">Volver</a>';
 return;
 }
