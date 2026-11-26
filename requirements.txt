@@ -2,3 +2,4 @@
 yt-dlp
 gunicorn
 requests
+gallery-dl

@@ -9,20 +9,24 @@
 <body>
 <div class="container">
 <h1>Bpss TikToks</h1>
-<p class="warn">Videos privados o geobloqueados no se pueden descargar. Solo publicos.</p>
+<p class="warn">Videos/fotos privados no se pueden descargar. Solo publicos.</p>
 <div id="msg">
 <div class="spinner"></div>
-<p class="loading-text">Descargando...</p>
+<p class="loading-text" id="loadText">Descargando...</p>
 </div>
 <script>
 var id='{{ task_id }}';
 var tries=0;
+var maxTries=300;
+var msgs=['Descargando...','Procesando...','Casi listo...','Trabajando...'];
+var mi=0;
 function check(){
 tries++;
-if(tries>90){
-document.getElementById('msg').innerHTML='<p class="error-text">Timeout. Intentalo de nuevo.</p><a href="/" class="link-back">Volver</a>';
+if(tries>maxTries){
+document.getElementById('msg').innerHTML='<p class="error-text">Timeout (10 min). Si es una playlist, intenta con menos videos.</p><a href="/" class="link-back">Volver</a>';
 return;
 }
+if(tries%15===0&&tries<maxTries){mi=(mi+1)%msgs.length;var lt=document.getElementById('loadText');if(lt)lt.textContent=msgs[mi];}
 fetch('/api/status/'+id).then(function(r){return r.json()}).then(function(d){
 if(d.status==='done'){
 var dlUrl=location.origin+'/download/'+d.file;
@@ -34,8 +38,7 @@ if(d.title)info+='<p class="file-title">'+d.title+'</p>';
 if(d.size)info+='<p class="file-size">'+d.size+'</p>';
 if(d.platform)info+='<p class="file-platform">'+d.platform+'</p>';
 document.getElementById('msg').innerHTML=
-'<p class="success-text">Listo</p>'+
-info+
+'<p class="success-text">Listo</p>'+info+
 '<a href="'+dlUrl+'" class="btn-download">Descargar</a>'+
 '<div class="actions">'+
 '<button class="btn-action" onclick="navigator.clipboard.writeText(\''+dlUrl+'\');this.textContent=\'Copiado\'">Copiar</button>'+
@@ -44,7 +47,7 @@ info+
 '</div>'+
 '<form method="POST" action="/" class="next-form">'+
 '<input type="text" name="url" placeholder="Otra URL...">'+
-'<button type="submit" name="type" value="video">Video</button>'+
+'<button type="submit" name="type" value="video">Video/Foto</button>'+
 '<button type="submit" name="type" value="audio">Audio</button>'+
 '</form>';
 }else if(d.status==='error'){

@@ -4,13 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bpss TikToks - Descarga sin marca de agua</title>
-<meta name="description" content="Descarga videos y audios de TikTok, Instagram Reels, Facebook, YouTube Shorts y X sin marca de agua. Gratis.">
+<meta name="description" content="Descarga videos, fotos y audios de TikTok, Instagram, Facebook, YouTube y X. Gratis.">
 <meta property="og:title" content="Bpss TikToks">
-<meta property="og:description" content="Descarga videos y audios sin marca de agua. TikTok, Instagram, Facebook, YouTube, X.">
+<meta property="og:description" content="Descarga de TikTok, Instagram, Facebook, YouTube, X.">
 <meta property="og:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
 <meta property="og:url" content="https://bpss-tiktoks.onrender.com">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#FFF8F0">
 <link rel="icon" href="/static/logo.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -23,7 +22,7 @@
 <form method="POST" id="dlForm">
 <input type="text" name="url" id="urlInput" placeholder="Pega una URL de cualquier plataforma..." required autocomplete="off">
 <div class="btns">
-<button type="submit" name="type" value="video">Video</button>
+<button type="submit" name="type" value="video">Video/Foto</button>
 <button type="submit" name="type" value="audio">Audio</button>
 </div>
 </form>
@@ -32,7 +31,7 @@
 <div class="chat-box">
 <div class="chat-header">
 <p class="chat-title">Chat IA</p>
-<button class="clear-chat" id="clearChat" title="Limpiar chat">&times;</button>
+<button class="clear-chat" id="clearChat" title="Limpiar">&times;</button>
 </div>
 <div id="chatMsgs"></div>
 <div class="suggestions" id="suggestions"></div>
@@ -43,79 +42,36 @@
 </div>
 </div>
 <script>
-// TEMA
 var isDark=localStorage.getItem('bpss_dark')==='1';
 function applyTheme(){document.body.classList.toggle('dark',isDark);document.getElementById('themeToggle').textContent=isDark?'\u2600\uFE0F':'\u263E\uFE0F';}
 applyTheme();
 document.getElementById('themeToggle').onclick=function(){isDark=!isDark;localStorage.setItem('bpss_dark',isDark?'1':'0');applyTheme();};
-
-// CONTADOR
 var dlCount=parseInt(localStorage.getItem('bpss_dl_count')||'0');
 document.getElementById('counter').textContent=dlCount>0?dlCount+' descargas':'';
-
-// HISTORIAL
 window.addEventListener('DOMContentLoaded',function(){
 var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
 if(h.length)document.getElementById('history').innerHTML='<div class="history"><div class="history-header"><p class="history-title">Recientes</p><button class="clear-history" onclick="clearHistory()">Limpiar</button></div>'+h.slice(0,4).map(function(u){return '<p class="history-item">'+u+'</p>'}).join('')+'</div>';
 });
 function clearHistory(){localStorage.removeItem('bpss_h');document.getElementById('history').innerHTML='';}
-
-// FORMULARIO
 document.getElementById('dlForm').addEventListener('submit',function(){
 var u=document.getElementById('urlInput').value;
 if(u){var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');h.unshift(u);localStorage.setItem('bpss_h',JSON.stringify(h.slice(0,10)));}
 });
-
-// CHAT
-var chatHistory=[];
-var lastError=null;
-function addMsg(who,text){
-var d=document.createElement('div');
-d.className='msg '+(who==='user'?'user':'bot');
-d.textContent=text;
-document.getElementById('chatMsgs').appendChild(d);
-document.getElementById('chatMsgs').scrollTop=99999;
-}
-function showSuggestions(sugs){
-var el=document.getElementById('suggestions');
-if(!sugs||!sugs.length){el.innerHTML='';return;}
-el.innerHTML='<div class="sug-list">'+sugs.map(function(s){return '<button class="sug-btn" onclick="useSuggestion(this)">'+s+'</button>'}).join('')+'</div>';
-}
-function useSuggestion(btn){
-document.getElementById('chatInput').value=btn.textContent;
-sendChat();
-}
+var chatHistory=[];var lastError=null;
+function addMsg(who,text){var d=document.createElement('div');d.className='msg '+(who==='user'?'user':'bot');d.textContent=text;document.getElementById('chatMsgs').appendChild(d);document.getElementById('chatMsgs').scrollTop=99999;}
+function showSugs(sugs){var el=document.getElementById('suggestions');if(!sugs||!sugs.length){el.innerHTML='';return;}el.innerHTML='<div class="sug-list">'+sugs.map(function(s){return '<button class="sug-btn" onclick="document.getElementById(\'chatInput\').value=this.textContent;sendChat();">'+s+'</button>'}).join('')+'</div>';}
 function sendChat(){
-var inp=document.getElementById('chatInput');
-var msg=inp.value.trim();
-if(!msg)return;
-addMsg('user',msg);
-inp.value='';
-chatHistory.push({role:'user',content:msg});
+var inp=document.getElementById('chatInput');var msg=inp.value.trim();if(!msg)return;
+addMsg('user',msg);inp.value='';chatHistory.push({role:'user',content:msg});
 document.getElementById('suggestions').innerHTML='';
-// Indicador de carga
-var loading=document.createElement('div');
-loading.className='msg bot loading';
-loading.textContent='...';
-document.getElementById('chatMsgs').appendChild(loading);
-document.getElementById('chatMsgs').scrollTop=99999;
+var ld=document.createElement('div');ld.className='msg bot loading';ld.textContent='...';document.getElementById('chatMsgs').appendChild(ld);document.getElementById('chatMsgs').scrollTop=99999;
 fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory,last_error:lastError})})
-.then(function(r){return r.json()})
-.then(function(d){
-loading.remove();
-addMsg('bot',d.reply);
-chatHistory.push({role:'assistant',content:d.reply});
-showSuggestions(d.suggestions);
-})
-.catch(function(){loading.remove();addMsg('bot','Error. Intenta de nuevo.');});
+.then(function(r){return r.json()}).then(function(d){ld.remove();addMsg('bot',d.reply);chatHistory.push({role:'assistant',content:d.reply});showSugs(d.suggestions);})
+.catch(function(){ld.remove();addMsg('bot','Error. Intenta de nuevo.');});
 }
 document.getElementById('chatSend').onclick=sendChat;
 document.getElementById('chatInput').onkeydown=function(e){if(e.key==='Enter')sendChat();};
-document.getElementById('clearChat').onclick=function(){
-chatHistory=[];
-document.getElementById('chatMsgs').innerHTML='';
-document.getElementById('suggestions').innerHTML='';
-};
+document.getElementById('clearChat').onclick=function(){chatHistory=[];document.getElementById('chatMsgs').innerHTML='';document.getElementById('suggestions').innerHTML='';};
 </script>
 </body>
 </html>
