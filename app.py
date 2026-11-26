@@ -30,22 +30,21 @@ def download_video(url):
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info)
+        return os.path.basename(ydl.prepare_filename(info))
 
 def download_audio(url):
     url = resolve_short_url(url)
     opts = {
         'quiet': True,
         'no_warnings': True,
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
         'noplaylist': True,
         'http_headers': {'User-Agent': UA},
-        'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '0'}],
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info)
+        return os.path.basename(ydl.prepare_filename(info))
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -67,7 +66,8 @@ def index():
 
 @app.route('/download/<path:filename>')
 def download(filename):
-    return send_file(os.path.join(DOWNLOAD_DIR, filename), as_attachment=True)
+    safe = os.path.basename(filename)
+    return send_file(os.path.join(DOWNLOAD_DIR, safe), as_attachment=True)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
