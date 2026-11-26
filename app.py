@@ -48,13 +48,16 @@ def do_download(task_id, url, dtype):
         else:
             opts = {
                 'quiet': True, 'no_warnings': True,
-                'format': 'best/best',
+                'format': 'bestvideo+bestaudio/best',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
+                'merge_output_format': 'mp4',
                 'noplaylist': True,
                 'http_headers': {'User-Agent': UA},
             }
-        if is_youtube and os.path.exists(COOKIES):
-            opts['cookiefile'] = COOKIES
+        if is_youtube:
+            opts['extractor_args'] = {'youtube': {'player_client': 'default,-android_sdkless'}}
+            if os.path.exists(COOKIES):
+                opts['cookiefile'] = COOKIES
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             fname = os.path.basename(ydl.prepare_filename(info))
