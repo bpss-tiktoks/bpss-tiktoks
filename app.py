@@ -6,12 +6,13 @@ app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_DIR = os.path.join(BASE, 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
 GEMINI_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent'
+GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-
 req_log = defaultdict(list)
+
 def rate_limit():
     ip = request.remote_addr
     now = time.time()
@@ -56,7 +57,7 @@ def do_download(task_id, url, dtype):
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             fname = os.path.basename(ydl.prepare_filename(info))
-        tasks[task_id] = {'status': 'done', 'file': fname, 'error': None}
+            tasks[task_id] = {'status': 'done', 'file': fname, 'error': None}
     except Exception as e:
         tasks[task_id] = {'status': 'error', 'file': None, 'error': str(e)[:500]}
 
@@ -66,8 +67,21 @@ def chat_with_gemini(messages):
     if not GEMINI_KEY:
         return 'El chatbot no esta configurado. Pega la URL en el formulario de arriba.'
     try:
-        contents = [{'role': 'user' if m['role'] == 'user' else 'model', 'parts': [{'text': m['content']}]} for m in messages]
-        r = requests.post(GEMINI_URL + '?key=' + GEMINI_KEY, json={'systemInstruction': {'parts': [{'text': SYSTEM_PROMPT}]}, 'contents': contents, 'generationConfig': {'maxOutputTokens': 500, 'temperature': 0.7}}, timeout=30) return r.json()['candidates'][0]['content']['parts'][0]['text']
+        contents = []
+        for m in messages:
+            role = 'user' if m['role'] == 'user' else 'model'
+            contents.append({'role': role, 'parts': [{'text': m['content']}]})
+        r = requests.post(
+            GEMINI_URL + '?key=' + GEMINI_KEY,
+            json={
+                'systemInstruction': {'parts': [{'text': SYSTEM_PROMPT}]},
+                'contents': contents,
+                'generationConfig': {'maxOutputTokens': 500, 'temperature': 0.7},
+            },
+            timeout=30
+        )
+        data = r.json()
+        return data['candidates'][0]['content']['parts'][0]['text']
     except Exception as e:
         return f'Error del chatbot: {str(e)[:200]}'
 
@@ -82,8 +96,8 @@ def index():
             dtype = request.form.get('type', 'video')
             if not url:
                 error = 'Pega una URL'
-            elif not any(d in url for d in ['tiktok.com', 'instagram.com']):
-                error = 'URL no valida (solo TikTok o Instagram)'
+            elif not any(d in url for d in ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch']):
+                error = 'URL no valida (TikTok, Instagram o Facebook)'
             else:
                 task_id = str(uuid.uuid4())[:8]
                 tasks[task_id] = {'status': 'processing', 'file': None, 'error': None}
@@ -122,12 +136,3 @@ def chat():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-
-
-
-
-
-
-
-
