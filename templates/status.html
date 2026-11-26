@@ -9,7 +9,7 @@
 <body>
 <div class="container">
 <h1>Bpss TikToks</h1>
-<p class="warn">Videos privados no se pueden descargar. Solo publicos.</p>
+<p class="warn">Videos privados o geobloqueados no se pueden descargar. Solo publicos.</p>
 <div id="msg">
 <div class="spinner"></div>
 <p class="loading-text">Descargando...</p>
@@ -29,8 +29,13 @@ var dlUrl=location.origin+'/download/'+d.file;
 var shareText='Descarga aqui: '+dlUrl;
 var dlCount=parseInt(localStorage.getItem('bpss_dl_count')||'0')+1;
 localStorage.setItem('bpss_dl_count',dlCount);
+var info='';
+if(d.title)info+='<p class="file-title">'+d.title+'</p>';
+if(d.size)info+='<p class="file-size">'+d.size+'</p>';
+if(d.platform)info+='<p class="file-platform">'+d.platform+'</p>';
 document.getElementById('msg').innerHTML=
 '<p class="success-text">Listo</p>'+
+info+
 '<a href="'+dlUrl+'" class="btn-download">Descargar</a>'+
 '<div class="actions">'+
 '<button class="btn-action" onclick="navigator.clipboard.writeText(\''+dlUrl+'\');this.textContent=\'Copiado\'">Copiar</button>'+

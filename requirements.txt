@@ -1,5 +1,4 @@
 ﻿flask
-gunicorn
 yt-dlp
-gallery-dl
-static-ffmpeg
+gunicorn
+requests
