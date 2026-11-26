@@ -23,7 +23,6 @@ VALID_DOMAINS = ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch', 'you
 req_log = defaultdict(list)
 tasks = {}
 
-#  FFMPEG CHECK 
 def has_ffmpeg():
     try:
         subprocess.run(['ffmpeg', '-version'], capture_output=True, timeout=5)
@@ -46,10 +45,11 @@ def auto_cleanup():
     now = time.time()
     try:
         files = []
-        for f in os.listdir(DOWNLOAD_DIR):
-            fpath = os.path.join(DOWNLOAD_DIR, f)
-            if os.path.isfile(fpath):
-                files.append((fpath, os.path.getmtime(fpath)))
+        for root, dirs, fnames in os.walk(DOWNLOAD_DIR):
+            for f in fnames:
+                fpath = os.path.join(root, f)
+                if os.path.isfile(fpath):
+                    files.append((fpath, os.path.getmtime(fpath)))
         for fpath, mtime in files:
             if now - mtime > CLEANUP_AGE:
                 os.remove(fpath)
@@ -80,7 +80,8 @@ def detect_platform(url):
     return '?'
 
 def is_tiktok_photo(url):
-    return '/photo/' in url and 'tiktok.com' in url
+    """Detectar URL de foto/slideshow de TikTok"""
+    return ('/photo/' in url or '/photo?' in url) and 'tiktok.com' in url
 
 def is_youtube_playlist(url):
     return 'list=' in url and ('youtube.com' in url or 'youtu.be' in url)
@@ -92,7 +93,23 @@ def get_file_size(fpath):
         return f'{size/1024:.0f} KB'
     except: return ''
 
-#  DESCARGA MAXIMA CALIDAD 
+def find_newest_in_dir(directory):
+    """Encontrar el archivo mas reciente en un directorio (recursivo)"""
+    try:
+        files = []
+        for root, dirs, fnames in os.walk(directory):
+            for f in fnames:
+                fpath = os.path.join(root, f)
+                if os.path.isfile(fpath):
+                    files.append((fpath, os.path.getmtime(fpath)))
+        if files:
+            files.sort(key=lambda x: x[1], reverse=True)
+            return files[0][0]
+    except:
+        pass
+    return None
+
+#  DESCARGA PRINCIPAL 
 def do_download(task_id, url, dtype):
     platform = detect_platform(url)
     try:
@@ -105,23 +122,18 @@ def do_download(task_id, url, dtype):
 
         playlist = is_youtube_playlist(url)
 
-        #  VIDEO: maxima calidad (bv*+ba/b = mejor video + mejor audio, sin limite de resolucion) 
         if dtype == 'video':
             opts = {
                 'quiet': True, 'no_warnings': True,
-                'format': 'bv*+ba/b',
+                'format': 'bv*+ba/b' if FFMPEG else 'best/b',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
-                'merge_output_format': 'mp4',
                 'retries': 3,
             }
-            if not FFMPEG:
-                opts['format'] = 'best/b'
-                del opts['merge_output_format']
-
-        #  AUDIO: original sin conversion (Opus/AAC nativo = maxima calidad) 
-        elif dtype == 'audio':
+            if FFMPEG:
+                opts['merge_output_format'] = 'mp4'
+        else:
             opts = {
                 'quiet': True, 'no_warnings': True,
                 'format': 'bestaudio/best',
@@ -130,8 +142,6 @@ def do_download(task_id, url, dtype):
                 'http_headers': {'User-Agent': UA},
                 'retries': 3,
             }
-            # SIN FFmpegExtractAudio = mantiene Opus/AAC original (max calidad)
-            # Si no hay ffmpeg, igual funciona (solo descarga el stream de audio)
 
         if playlist:
             opts['playlist_items'] = '1-10'
@@ -140,18 +150,16 @@ def do_download(task_id, url, dtype):
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             if playlist and info:
-                files = sorted([f for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))], key=lambda f: os.path.getmtime(os.path.join(DOWNLOAD_DIR, f)), reverse=True)
-                fname = files[0] if files else None
-                count = len(files)
+                fpath = find_newest_in_dir(DOWNLOAD_DIR)
+                fname = os.path.relpath(fpath, DOWNLOAD_DIR) if fpath else None
+                count = len([f for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))])
                 tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': f'Playlist ({count} archivos)', 'size': '', 'platform': platform}
             else:
                 fname = os.path.basename(ydl.prepare_filename(info))
                 fpath = os.path.join(DOWNLOAD_DIR, fname)
                 fsize = get_file_size(fpath) if os.path.exists(fpath) else ''
                 title = info.get('title', '')[:80] if info else ''
-                # Detectar extension real
-                ext = os.path.splitext(fname)[1].lstrip('.')
-                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform, 'format': ext.upper()}
+                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform}
     except Exception as e:
         err_msg = str(e)[:500]
         if '10231' in err_msg or '10204' in err_msg:
@@ -159,55 +167,66 @@ def do_download(task_id, url, dtype):
         elif '10216' in err_msg:
             err_msg = f'{platform}: Video privado. Solo videos publicos.'
         elif 'Unsupported URL' in err_msg or 'not a valid URL' in err_msg:
-            err_msg = 'URL no soportada. Verifica que sea un video/foto publico.'
+            err_msg = 'URL no soportada. Verifica que sea un video publico.'
         elif 'Sign in' in err_msg or 'login' in err_msg.lower():
             err_msg = f'{platform}: Requiere login. Solo videos publicos.'
         elif 'ffmpeg' in err_msg.lower() and not FFMPEG:
-            err_msg = 'ffmpeg no disponible. El Build Command debe incluir: apt-get install -y ffmpeg'
+            err_msg = 'ffmpeg no disponible. Build Command debe incluir: apt-get install -y ffmpeg'
         elif 'Unable to download' in err_msg:
             err_msg = f'{platform}: No se pudo descargar. Video eliminado o restringido.'
         else:
             err_msg = f'{platform}: {err_msg[:200]}'
         tasks[task_id] = {'status': 'error', 'file': None, 'error': err_msg, 'platform': platform}
 
-#  GALLERY-DL (fotos TikTok/IG - calidad original) 
+#  GALLERY-DL CORREGIDO 
 def do_gallery_dl(task_id, url, dtype, platform):
     try:
         outdir = os.path.join(DOWNLOAD_DIR, 'photos')
         os.makedirs(outdir, exist_ok=True)
-        before = set(os.listdir(outdir))
 
-        cmd = ['gallery-dl', '-d', outdir, url]
-        # gallery-dl por defecto descarga la calidad original (sin downscale)
-        if dtype == 'audio':
-            cmd += ['-o', 'videos=true', '-o', 'images=false']
-        else:
-            cmd += ['-o', 'images=true', '-o', 'videos=true']
+        # Registrar archivos antes
+        before = set()
+        for root, dirs, fnames in os.walk(outdir):
+            for f in fnames:
+                before.add(os.path.join(root, f))
+
+        # Comando CORRECTO para gallery-dl:
+        # -D = directorio EXACTO (no crea subcarpetas)
+        # Sin -o flags (los defaults ya descargan photos=true, videos=true)
+        cmd = ['gallery-dl', '-D', outdir, url]
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
-        after = set(os.listdir(outdir))
+        # Buscar archivos nuevos
+        after = set()
+        for root, dirs, fnames in os.walk(outdir):
+            for f in fnames:
+                after.add(os.path.join(root, f))
+
         new_files = after - before
 
         if new_files:
-            fname = sorted(new_files)[0]
-            fpath = os.path.join(outdir, fname)
-            rel = os.path.join('photos', fname)
-            tasks[task_id] = {'status': 'done', 'file': rel, 'error': None, 'title': f'{platform} Photos ({len(new_files)} archivos) - Original', 'size': get_file_size(fpath), 'platform': platform}
-        elif result.returncode != 0:
-            err = result.stderr[:300] if result.stderr else 'Sin archivos'
-            tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform} photos: {err}', 'platform': platform}
+            # Usar el primer archivo nuevo
+            fpath = sorted(new_files)[0]
+            rel = os.path.relpath(fpath, DOWNLOAD_DIR)
+            tasks[task_id] = {'status': 'done', 'file': rel, 'error': None, 'title': f'{platform} Photos ({len(new_files)} archivos)', 'size': get_file_size(fpath), 'platform': platform}
         else:
-            tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform}: No se descargo nada.', 'platform': platform}
+            # Si no hay archivos nuevos, mostrar error de gallery-dl
+            err = result.stderr.strip()[:300] if result.stderr else ''
+            if not err:
+                err = result.stdout.strip()[:300] if result.stdout else ''
+            if result.returncode == 0 and not err:
+                err = 'gallery-dl termino sin errores pero no descargo nada. Verifica que la URL sea de un post publico.'
+            tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform} photos: {err}', 'platform': platform}
     except subprocess.TimeoutExpired:
-        tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform}: Timeout (120s).', 'platform': platform}
+        tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform}: Timeout al descargar fotos (120s).', 'platform': platform}
     except FileNotFoundError:
-        tasks[task_id] = {'status': 'error', 'file': None, 'error': 'gallery-dl no instalado.', 'platform': platform}
+        tasks[task_id] = {'status': 'error', 'file': None, 'error': 'gallery-dl no esta instalado en el servidor.', 'platform': platform}
     except Exception as e:
-        tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform}: {str(e)[:200]}', 'platform': platform}
+        tasks[task_id] = {'status': 'error', 'file': None, 'error': f'{platform} photos: {str(e)[:200]}', 'platform': platform}
 
 #  CHATBOT 
-SYSTEM_PROMPT = """Eres el asistente de Bpss TikToks. Web que descarga en MAXIMA CALIDAD: videos (hasta 4K/8K), audio original (Opus/AAC sin conversion), y fotos en resolucion original de TikTok, Instagram, Facebook, YouTube y X.
+SYSTEM_PROMPT = """Eres el asistente de Bpss TikToks. Web que descarga en MAXIMA CALIDAD: videos (hasta 4K/8K), audio original, y fotos en resolucion original de TikTok, Instagram, Facebook, YouTube y X.
 
 PERSONALIDAD: Amigable, directo, en espanol. Breve pero completo. Max 2 emojis.
 
@@ -215,20 +234,19 @@ CAPACIDADES:
 1. Conversar sobre CUALQUIER tema
 2. Resolver problemas tecnicos
 3. Ayudar con la web:
-   - Video: maxima resolucion disponible (1080p, 4K, 8K) en MP4
-   - Audio: formato original (Opus o AAC) SIN conversion a MP3 = maxima calidad
-   - Fotos: resolucion original (JPG) via gallery-dl
+   - Video: maxima resolucion en MP4
+   - Audio: formato original (Opus/AAC) sin conversion
+   - Fotos TikTok: JPG original via gallery-dl
    - Playlists YouTube: max 10 videos
    - No funciona: videos privados, DRM, Spotify
 4. Escribir y explicar codigo
 5. Consejos de SEO y marketing
 
 REGLAS:
-- Si preguntan por Spotify: requiere cuenta Premium + API credentials (no soportado)
-- Si preguntan por Live Photo: no existe como formato descargable
+- Si preguntan por Spotify: no soportado
+- Si preguntan por Live Photo: no existe
 - Si hay error de descarga, dale soluciones
-- No inventes features
-- Responde con el largo que necesite"""
+- No inventes features"""
 
 def chat_with_groq(messages, last_error=None):
     if not GROQ_KEY:
@@ -252,7 +270,7 @@ def gen_suggestions(reply):
     r = reply.lower()
     if 'tiktok' in r or 'instagram' in r: return ['Que URL no funciona?', 'Como descargo fotos?', 'Que es geobloqueo?']
     if 'error' in r or 'falla' in r: return ['Como lo arreglo?', 'Hay otra opcion?', 'Que puede descargar?']
-    if 'calidad' in r or 'resolucion' in r or 'audio' in r: return ['Que formatos soporta?', 'Por que no MP3?', 'Cuanto pesa?']
+    if 'calidad' in r or 'resolucion' in r: return ['Que formatos soporta?', 'Cuanto pesa?', 'Por que no MP3?']
     if 'python' in r or 'codigo' in r: return ['Dame un ejemplo', 'Mas simple', 'Que es Flask?']
     return ['Que puede hacer esta web?', 'Ayudame con un error', 'Cuentame algo interesante']
 
@@ -291,8 +309,12 @@ def api_status(task_id):
 
 @app.route('/download/<path:filename>')
 def download(filename):
+    # FIX: usar normpath para mantener subcarpetas (photos/xxx.jpg)
     safe = os.path.normpath(filename)
     fpath = os.path.join(DOWNLOAD_DIR, safe)
+    # Seguridad: verificar que el path no escape de DOWNLOAD_DIR
+    if not fpath.startswith(DOWNLOAD_DIR):
+        return 'Ruta invalida', 400
     if not os.path.exists(fpath):
         return 'Archivo expirado. Descargalo de nuevo.', 404
     return send_file(fpath, as_attachment=True)
@@ -316,7 +338,9 @@ def sitemap():
 
 @app.route('/health')
 def health():
-    disk = len([f for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))])
+    disk = 0
+    for root, dirs, fnames in os.walk(DOWNLOAD_DIR):
+        disk += len(fnames)
     return jsonify({'status': 'ok', 'active': sum(1 for t in tasks.values() if t['status'] == 'processing'), 'files': disk, 'groq': bool(GROQ_KEY), 'ffmpeg': FFMPEG})
 
 @app.route('/google110a1e6092696f4d.html')
@@ -325,4 +349,3 @@ def google_verify():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
