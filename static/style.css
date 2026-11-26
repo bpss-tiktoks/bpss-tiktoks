@@ -10,7 +10,4 @@ button{flex:1;padding:.6rem;background:#fe2c55;color:#fff;border:none;border-rad
 button:nth-child(2){background:#833ab4}
 button:hover{opacity:.85}
 .error{margin-top:.8rem;padding:.6rem;background:#fff5f5;border:1px solid #fe2c55;border-radius:8px;color:#c0392b;font-size:.7rem;word-break:break-all}
-.result{margin-top:.8rem;padding:.8rem;background:#f0fff0;border:1px solid #4caf50;border-radius:8px}
-.btn{display:inline-block;margin-top:.4rem;padding:.5rem 1.2rem;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:.75rem}
-.btn-copy{margin-top:.4rem;margin-left:.3rem;padding:.4rem .8rem;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.7rem}
 @media(max-width:480px){.container{padding:1.2rem 1rem}h1{font-size:1.2rem}}

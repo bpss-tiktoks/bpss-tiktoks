@@ -9,20 +9,29 @@
 <body>
 <div class="container">
 <h1>Bpss TikToks</h1>
-<div id="msg"><div style="width:36px;height:36px;border:4px solid #fe2c55;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div><p style="margin-top:.8rem;color:#666;font-size:.8rem">Descargando...</p></div>
+<div id="msg">
+<div style="width:36px;height:36px;border:4px solid #fe2c55;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div>
+<p style="margin-top:.8rem;color:#666;font-size:.8rem">Descargando...</p>
+</div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 <script>
 var id='{{ task_id }}';
+var tries=0;
 function check(){
+tries++;
+if(tries>60){
+document.getElementById('msg').innerHTML='<p style="color:#c0392b;font-size:.8rem">Timeout. Intentalo de nuevo.</p><a href="/" style="display:inline-block;margin-top:.6rem;color:#fe2c55;font-size:.8rem">Volver</a>';
+return;
+}
 fetch('/api/status/'+id).then(function(r){return r.json()}).then(function(d){
 if(d.status==='done'){
-document.getElementById('msg').innerHTML='<p style="color:#4caf50;font-size:.9rem">Listo</p><a href="/download/'+d.file+'" class="btn" style="display:inline-block;margin-top:.6rem;padding:.6rem 1.5rem;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Descargar</a>';
+document.getElementById('msg').innerHTML='<p style="color:#4caf50;font-size:.9rem">Listo</p><a href="/download/'+d.file+'" style="display:inline-block;margin-top:.6rem;padding:.6rem 1.5rem;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">Descargar</a>';
 }else if(d.status==='error'){
-document.getElementById('msg').innerHTML='<p style="color:#c0392b;font-size:.8rem;word-break:break-all">'+d.error+'</p><a href="/" style="display:inline-block;margin-top:.6rem;color:#fe2c55;font-size:.8rem">Volver</a>';
+document.getElementById('msg').innerHTML='<p style="color:#c0392b;font-size:.8rem;word-break:break-all;margin-top:.5rem">'+(d.error||'Error desconocido')+'</p><a href="/" style="display:inline-block;margin-top:.6rem;color:#fe2c55;font-size:.8rem">Volver</a>';
 }else{
 setTimeout(check,2000);
 }
-});
+}).catch(function(){setTimeout(check,3000)});
 }
 setTimeout(check,2000);
 </script>
