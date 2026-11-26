@@ -291,7 +291,7 @@ def api_status(task_id):
 
 @app.route('/download/<path:filename>')
 def download(filename):
-    safe = os.path.basename(filename)
+    safe = os.path.normpath(filename)
     fpath = os.path.join(DOWNLOAD_DIR, safe)
     if not os.path.exists(fpath):
         return 'Archivo expirado. Descargalo de nuevo.', 404
@@ -325,3 +325,4 @@ def google_verify():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
