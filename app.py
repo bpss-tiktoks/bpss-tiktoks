@@ -132,5 +132,10 @@ def chat():
     reply = chat_with_groq(messages)
     return jsonify({'reply': reply})
 
+@app.route('/google110a1e6092696f4d.html')
+def google_verify():
+    return send_file(os.path.join(BASE, 'static', 'google110a1e6092696f4d.html'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
