@@ -1,3 +1,4 @@
 ﻿flask
-yt-dlp[default,curl-cffi]
+yt-dlp
+curl_cffi
 gunicorn

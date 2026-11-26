@@ -5,11 +5,13 @@ app = Flask(__name__)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
 def resolve_short_url(url):
     if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
         try:
             req = urllib.request.Request(url, method='HEAD')
-            req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
+            req.add_header('User-Agent', UA)
             resp = urllib.request.urlopen(req, timeout=10)
             return resp.url
         except Exception:
@@ -21,14 +23,10 @@ def download_video(url):
     opts = {
         'quiet': True,
         'no_warnings': True,
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'format': 'best[ext=mp4]/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
         'noplaylist': True,
-        'merge_output_format': 'mp4',
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-        },
-        'impersonate': 'chrome',
+        'http_headers': {'User-Agent': UA},
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -42,15 +40,8 @@ def download_audio(url):
         'format': 'bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
         'noplaylist': True,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '0',
-        }],
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-        },
-        'impersonate': 'chrome',
+        'http_headers': {'User-Agent': UA},
+        'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '0'}],
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -66,13 +57,10 @@ def index():
         if not url:
             error = 'Pega una URL de TikTok'
         elif 'tiktok.com' not in url:
-            error = 'URL no valida. Debe ser de TikTok'
+            error = 'URL no valida'
         else:
             try:
-                if dtype == 'audio':
-                    file_path = download_audio(url)
-                else:
-                    file_path = download_video(url)
+                file_path = download_audio(url) if dtype == 'audio' else download_video(url)
             except Exception as e:
                 error = str(e)[:300]
     return render_template('index.html', error=error, file_path=file_path)
