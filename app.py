@@ -1,11 +1,22 @@
 ﻿from flask import Flask, render_template, request, send_file
-import yt_dlp, os, urllib.request
+import yt_dlp, os, urllib.request, time
+from collections import defaultdict
 
 app = Flask(__name__)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
+req_log = defaultdict(list)
+def rate_limit():
+    ip = request.remote_addr
+    now = time.time()
+    req_log[ip] = [t for t in req_log[ip] if now - t < 60]
+    if len(req_log[ip]) >= 5:
+        return False
+    req_log[ip].append(now)
+    return True
 
 def resolve_short_url(url):
     if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
@@ -51,17 +62,20 @@ def index():
     error = None
     file_path = None
     if request.method == 'POST':
-        url = request.form.get('url', '').strip()
-        dtype = request.form.get('type', 'video')
-        if not url:
-            error = 'Pega una URL de TikTok'
-        elif 'tiktok.com' not in url:
-            error = 'URL no valida'
+        if not rate_limit():
+            error = 'Demasiadas peticiones. Espera 1 min.'
         else:
-            try:
-                file_path = download_audio(url) if dtype == 'audio' else download_video(url)
-            except Exception as e:
-                error = str(e)[:300]
+            url = request.form.get('url', '').strip()
+            dtype = request.form.get('type', 'video')
+            if not url:
+                error = 'Pega una URL'
+            elif not any(d in url for d in ['tiktok.com','instagram.com','youtube.com','youtu.be']):
+                error = 'URL no valida (TikTok, Instagram, YouTube)'
+            else:
+                try:
+                    file_path = download_audio(url) if dtype == 'audio' else download_video(url)
+                except Exception as e:
+                    error = str(e)[:300]
     return render_template('index.html', error=error, file_path=file_path)
 
 @app.route('/download/<path:filename>')
