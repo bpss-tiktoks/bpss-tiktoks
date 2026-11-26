@@ -60,7 +60,7 @@ def do_download(task_id, url, dtype):
     except Exception as e:
         tasks[task_id] = {'status': 'error', 'file': None, 'error': str(e)[:500]}
 
-SYSTEM_PROMPT = "Eres el asistente de Bpss TikToks, una web para descargar videos y audios de TikTok e Instagram sin marca de agua. Si el usuario pega una URL, dile que la ponga en el formulario de arriba y elija Video o Audio. Si tiene un problema, explicale la solucion en maximo 3 lineas en espanol. Si pregunta algo no relacionado, dile que esta web es solo para descargar videos de TikTok e Instagram."
+SYSTEM_PROMPT = "Eres un asistente inteligente y util. Puedes conversar sobre cualquier tema, resolver problemas tecnicos, explicar conceptos, ayudar con programacion, y tambien ayudar con la web de Bpss TikToks (descarga de videos de TikTok, Instagram y Facebook). Si el usuario tiene un problema con la web, explicale la solucion. Responde siempre en espanol, de forma clara y directa."
 
 def chat_with_gemini(messages):
     if not GEMINI_KEY:
@@ -122,6 +122,7 @@ def chat():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
