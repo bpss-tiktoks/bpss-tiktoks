@@ -6,8 +6,8 @@ app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_DIR = os.path.join(BASE, 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-GROQ_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+GEMINI_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent'
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -62,23 +62,12 @@ def do_download(task_id, url, dtype):
 
 SYSTEM_PROMPT = "Eres el asistente de Bpss TikToks, una web para descargar videos y audios de TikTok e Instagram sin marca de agua. Si el usuario pega una URL, dile que la ponga en el formulario de arriba y elija Video o Audio. Si tiene un problema, explicale la solucion en maximo 3 lineas en espanol. Si pregunta algo no relacionado, dile que esta web es solo para descargar videos de TikTok e Instagram."
 
-def chat_with_groq(messages):
-    if not GROQ_KEY:
+def chat_with_gemini(messages):
+    if not GEMINI_KEY:
         return 'El chatbot no esta configurado. Pega la URL en el formulario de arriba.'
     try:
-        all_msgs = [{'role': 'system', 'content': SYSTEM_PROMPT}]
-        for m in messages:
-            all_msgs.append({'role': m['role'], 'content': m['content']})
-        r = requests.post(GROQ_URL, headers={
-            'Authorization': 'Bearer ' + GROQ_KEY,
-            'Content-Type': 'application/json'
-        }, json={
-            'model': 'openai/gpt-oss-20b',
-            'messages': all_msgs,
-            'max_tokens': 500,
-            'temperature': 0.7,
-        }, timeout=30)
-        return r.json()['choices'][0]['message']['content']
+        contents = [{'role': 'user' if m['role'] == 'user' else 'model', 'parts': [{'text': m['content']}]} for m in messages]
+        r = requests.post(GEMINI_URL + '?key=' + GEMINI_KEY, json={'systemInstruction': {'parts': [{'text': SYSTEM_PROMPT}]}, 'contents': contents, 'generationConfig': {'maxOutputTokens': 500, 'temperature': 0.7}}, timeout=30) return r.json()['candidates'][0]['content']['parts'][0]['text']
     except Exception as e:
         return f'Error del chatbot: {str(e)[:200]}'
 
@@ -128,9 +117,16 @@ def chat():
     history = data.get('history', [])
     messages = history[-6:]
     messages.append({'role': 'user', 'content': user_msg})
-    reply = chat_with_groq(messages)
+    reply = chat_with_gemini(messages)
     return jsonify({'reply': reply})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
+
+
+
+
+
 
