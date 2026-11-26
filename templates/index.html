@@ -4,18 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bpss TikToks - Descarga sin marca de agua</title>
-<meta name="description" content="Descarga videos y audios de TikTok, Instagram y YouTube sin marca de agua. Gratis.">
-<meta property="og:title" content="Bpss TikToks">
-<meta property="og:description" content="Descarga videos y audios sin marca de agua">
+<meta name="description" content="Descarga videos y audios de TikTok e Instagram sin marca de agua. Gratis.">
 <link rel="icon" href="/static/logo.png">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="container">
 <h1>Bpss TikToks</h1>
-<p class="sub">TikTok - Instagram - YouTube | Sin marca de agua</p>
+<p class="sub">TikTok - Instagram | Sin marca de agua</p>
 <form method="POST" id="dlForm">
-<input type="text" name="url" id="urlInput" placeholder="Pega una URL de TikTok, Instagram o YouTube..." required>
+<input type="text" name="url" id="urlInput" placeholder="Pega una URL de TikTok o Instagram..." required>
 <div class="btns">
 <button type="submit" name="type" value="video">Video</button>
 <button type="submit" name="type" value="audio">Audio</button>
@@ -23,8 +21,41 @@
 </form>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 <div id="history"></div>
+<div class="chat-box">
+<p class="chat-title">Chat IA</p>
+<div id="chatMsgs"></div>
+<div class="chat-input">
+<input type="text" id="chatInput" placeholder="Escribe tu pregunta...">
+<button type="button" id="chatSend">Enviar</button>
+</div>
+</div>
 </div>
 <script>
+var chatHistory=[];
+function addMsg(who,text){
+var d=document.createElement('div');
+d.className='msg '+(who==='user'?'user':'bot');
+d.textContent=text;
+document.getElementById('chatMsgs').appendChild(d);
+document.getElementById('chatMsgs').scrollTop=99999;
+}
+function sendChat(){
+var inp=document.getElementById('chatInput');
+var msg=inp.value.trim();
+if(!msg)return;
+addMsg('user',msg);
+inp.value='';
+chatHistory.push({role:'user',content:msg});
+fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory})})
+.then(function(r){return r.json()})
+.then(function(d){
+addMsg('bot',d.reply);
+chatHistory.push({role:'assistant',content:d.reply});
+})
+.catch(function(){addMsg('bot','Error. Intenta de nuevo.')});
+}
+document.getElementById('chatSend').onclick=sendChat;
+document.getElementById('chatInput').onkeydown=function(e){if(e.key==='Enter')sendChat()};
 window.addEventListener('DOMContentLoaded',function(){
 var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
 if(h.length)document.getElementById('history').innerHTML='<hr style="margin:1rem 0;border:none;border-top:1px solid #eee"><p style="font-size:.7rem;color:#999">Recientes</p>'+h.slice(0,5).map(function(u){return '<p style="font-size:.65rem;color:#aaa;word-break:break-all;margin:.2rem 0">'+u+'</p>'}).join('');

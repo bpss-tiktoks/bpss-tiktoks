@@ -6,7 +6,6 @@ app = Flask(__name__)
 BASE = os.path.dirname(os.path.abspath(__file__))
 DOWNLOAD_DIR = os.path.join(BASE, 'downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-COOKIES = os.path.join(BASE, 'cookies.txt')
 GROQ_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
@@ -38,7 +37,6 @@ def resolve_short_url(url):
 def do_download(task_id, url, dtype):
     try:
         url = resolve_short_url(url)
-        is_youtube = 'youtube.com' in url or 'youtu.be' in url
         if dtype == 'audio':
             opts = {
                 'quiet': True, 'no_warnings': True,
@@ -55,10 +53,6 @@ def do_download(task_id, url, dtype):
                 'noplaylist': True,
                 'http_headers': {'User-Agent': UA},
             }
-        if is_youtube:
-            opts['extractor_args'] = {'youtube': {'player_client': 'mweb,tv'}}
-            if os.path.exists(COOKIES):
-                opts['cookiefile'] = COOKIES
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             fname = os.path.basename(ydl.prepare_filename(info))
@@ -66,7 +60,7 @@ def do_download(task_id, url, dtype):
     except Exception as e:
         tasks[task_id] = {'status': 'error', 'file': None, 'error': str(e)[:500]}
 
-SYSTEM_PROMPT = "Eres el asistente de Bpss TikToks, una web para descargar videos de TikTok, Instagram y YouTube sin marca de agua. Si el usuario pega una URL, dile que la ponga en el formulario de arriba. Si tiene un problema, explicale la solucion en maximo 3 lineas en espanol. Si pregunta algo no relacionado, dile que esta web es solo para descargar videos."
+SYSTEM_PROMPT = "Eres el asistente de Bpss TikToks, una web para descargar videos y audios de TikTok e Instagram sin marca de agua. Si el usuario pega una URL, dile que la ponga en el formulario de arriba y elija Video o Audio. Si tiene un problema, explicale la solucion en maximo 3 lineas en espanol. Si pregunta algo no relacionado, dile que esta web es solo para descargar videos de TikTok e Instagram."
 
 def chat_with_groq(messages):
     if not GROQ_KEY:
@@ -99,8 +93,8 @@ def index():
             dtype = request.form.get('type', 'video')
             if not url:
                 error = 'Pega una URL'
-            elif not any(d in url for d in ['tiktok.com', 'instagram.com', 'youtube.com', 'youtu.be']):
-                error = 'URL no valida (TikTok, Instagram, YouTube)'
+            elif not any(d in url for d in ['tiktok.com', 'instagram.com']):
+                error = 'URL no valida (solo TikTok o Instagram)'
             else:
                 task_id = str(uuid.uuid4())[:8]
                 tasks[task_id] = {'status': 'processing', 'file': None, 'error': None}
