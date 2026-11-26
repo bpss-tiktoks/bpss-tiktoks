@@ -2,61 +2,40 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bpss TikToks</title>
-<meta name="description" content="Descarga videos y audios de TikTok, Instagram Reels y Facebook sin marca de agua.">
-<meta property="og:title" content="Bpss TikToks">
-<meta property="og:description" content="Descarga videos y audios sin marca de agua.">
-<meta property="og:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
-<meta property="og:url" content="https://bpss-tiktoks.onrender.com">
-<meta property="og:type" content="website">
-<link rel="icon" href="/static/logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPSS TikTok Downloader</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
+<button class="theme-toggle" onclick="document.body.classList.toggle('dark')"></button>
 <div class="container">
-<h1>Bpss TikToks</h1>
-<p class="sub">Descarga sin marca de agua</p>
-<p class="counter" id="counter"></p>
-<form method="POST" id="dlForm">
-<input type="text" name="url" id="urlInput" placeholder="Pega una URL..." required>
-<div class="btns">
-<button type="submit" name="type" value="video">Video</button>
-<button type="submit" name="type" value="audio">Audio</button>
-</div>
-</form>
-{% if error %}<div class="error">{{ error }}</div>{% endif %}
-<div id="history"></div>
-<div class="chat-box">
-<p class="chat-title">Chat</p>
-<div id="chatMsgs"></div>
-<div class="chat-input">
-<input type="text" id="chatInput" placeholder="Pregunta...">
-<button type="button" id="chatSend">Enviar</button>
-</div>
-</div>
+<h1>BPSS TikTok</h1>
+<p class="sub">Descarga videos, fotos y lives sin marca de agua</p>
+<input type="text" id="url" placeholder="Pega la URL de TikTok..." onkeydown="if(event.key==='Enter')dl()">
+<div class="btns"><button onclick="dl()">Descargar</button></div>
+<div class="error" id="error" style="display:none"></div>
+<div class="result" id="result"></div>
 </div>
 <script>
-var isDark=localStorage.getItem('bpss_dark')==='1';
-function applyTheme(){document.body.classList.toggle('dark',isDark);document.getElementById('themeToggle').textContent=isDark?'\u2600\uFE0F':'\u263E\uFE0F';}
-applyTheme();
-document.getElementById('themeToggle').onclick=function(){isDark=!isDark;localStorage.setItem('bpss_dark',isDark?'1':'0');applyTheme();};
-var dlCount=parseInt(localStorage.getItem('bpss_dl_count')||'0');
-document.getElementById('counter').textContent=dlCount>0?dlCount+' descargas':'';
-window.addEventListener('DOMContentLoaded',function(){
-var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
-if(h.length)document.getElementById('history').innerHTML='<div class="history"><p class="history-title">Recientes</p>'+h.slice(0,3).map(function(u){return '<p class="history-item">'+u+'</p>'}).join('')+'</div>';
-});
-document.getElementById('dlForm').addEventListener('submit',function(){
-var u=document.getElementById('urlInput').value;
-if(u){var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');h.unshift(u);localStorage.setItem('bpss_h',JSON.stringify(h.slice(0,10)));}
-});
-var chatHistory=[];
-function addMsg(who,text){var d=document.createElement('div');d.className='msg '+(who==='user'?'user':'bot');d.textContent=text;document.getElementById('chatMsgs').appendChild(d);document.getElementById('chatMsgs').scrollTop=99999;}
-function sendChat(){var inp=document.getElementById('chatInput');var msg=inp.value.trim();if(!msg)return;addMsg('user',msg);inp.value='';chatHistory.push({role:'user',content:msg});fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory})}).then(function(r){return r.json()}).then(function(d){addMsg('bot',d.reply);chatHistory.push({role:'assistant',content:d.reply});}).catch(function(){addMsg('bot','Error.');});}
-document.getElementById('chatSend').onclick=sendChat;
-document.getElementById('chatInput').onkeydown=function(e){if(e.key==='Enter')sendChat()};
+async function dl(){
+  const url=document.getElementById('url').value.trim();
+  const err=document.getElementById('error');
+  const res=document.getElementById('result');
+  if(!url){err.textContent='Pega una URL válida';err.style.display='block';return;}
+  err.style.display='none';
+  res.innerHTML='<div class="spinner"></div><p class="loading-text">Descargando...</p>';
+  try{
+    const r=await fetch('/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Error');
+    const data=d.data;
+    let h='';
+    if(data.file)h+='<a class="btn-download" href="/files/'+data.file+'"> '+data.file+'</a>';
+    if(data.images)data.images.forEach(f=>{h+='<div class="actions"><a class="btn-action" href="/files/'+f+'"> '+f+'</a></div>';});
+    if(data.audio)h+='<div class="actions"><a class="btn-action" href="/files/'+data.audio+'"> '+data.audio+'</a></div>';
+    res.innerHTML=h;
+  }catch(e){err.textContent=e.message;err.style.display='block';res.innerHTML='';}
+}
 </script>
 </body>
 </html>
