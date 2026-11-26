@@ -37,7 +37,7 @@ def download_video(url):
         'format': 'best[ext=mp4]/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
         'noplaylist': True,
-        'http_headers': {'User-Agent': UA},
+        'impersonate': 'chrome',
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -48,10 +48,10 @@ def download_audio(url):
     opts = {
         'quiet': True,
         'no_warnings': True,
-        'format': 'bestaudio[ext=m4a]/bestaudio/best',
+        'format': 'bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
         'noplaylist': True,
-        'http_headers': {'User-Agent': UA},
+        'impersonate': 'chrome',
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
