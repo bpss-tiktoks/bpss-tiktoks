@@ -73,7 +73,7 @@ def chat_with_groq(messages):
             'Authorization': 'Bearer ' + GROQ_KEY,
             'Content-Type': 'application/json'
         }, json={
-            'model': 'llama-3.3-70b-versatile',
+            'model': 'openai/gpt-oss-20b',
             'messages': all_msgs,
             'max_tokens': 500,
             'temperature': 0.7,
@@ -133,3 +133,4 @@ def chat():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
