@@ -55,8 +55,10 @@ def do_download(task_id, url, dtype):
                 'noplaylist': True,
                 'http_headers': {'User-Agent': UA},
             }
-        if is_youtube and os.path.exists(COOKIES):
-            opts['cookiefile'] = COOKIES
+        if is_youtube:
+            opts['extractor_args'] = {'youtube': {'player_client': 'mweb,tv'}}
+            if os.path.exists(COOKIES):
+                opts['cookiefile'] = COOKIES
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
             fname = os.path.basename(ydl.prepare_filename(info))
