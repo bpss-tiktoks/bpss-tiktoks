@@ -13,9 +13,9 @@ GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 GROQ_MODEL = 'openai/gpt-oss-120b'
 MAX_TOKENS = 1000
 HISTORY_LIMIT = 10
-CLEANUP_AGE = 7200
-MAX_FILES = 50
-RATE_LIMIT = 10
+CLEANUP_AGE = 1800
+MAX_FILES = 15
+RATE_LIMIT = 5
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 VALID_DOMAINS = ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch', 'youtube.com', 'youtu.be', 'x.com', 'twitter.com']
@@ -114,9 +114,10 @@ def do_download(task_id, url, dtype):
     platform = detect_platform(url)
     try:
         url = resolve_short_url(url)
+        url = url.replace('/photo/', '/video/')
 
         # TIKTOK PHOTO  gallery-dl
-        if False:  # was: is_tiktok_photo
+        if is_tiktok_photo(url):
             do_gallery_dl(task_id, url, dtype, platform)
             return
 
