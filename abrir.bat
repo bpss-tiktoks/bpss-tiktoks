@@ -1,3 +1,3 @@
 @echo off
-powershell -NoExit -ExecutionPolicy Bypass -Command "cd C:\tiktok-dl"
+powershell -NoExit -ExecutionPolicy Bypass - "cd C:\tiktok-dl"
 pause   
