@@ -129,7 +129,9 @@ def do_download(task_id, url, dtype):
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
+                'cookiefile': os.path.join(BASE, 'cookies.txt') if os.path.exists(os.path.join(BASE, 'cookies.txt')) else None,
                 'retries': 3,
+                'extractor_args': {'youtube': {'player_client': 'tv_downgraded,android_vr,tv,web_embedded,mweb'}},
             }
             if FFMPEG:
                 opts['merge_output_format'] = 'mp4'
@@ -140,7 +142,9 @@ def do_download(task_id, url, dtype):
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
+                'cookiefile': os.path.join(BASE, 'cookies.txt') if os.path.exists(os.path.join(BASE, 'cookies.txt')) else None,
                 'retries': 3,
+                'extractor_args': {'youtube': {'player_client': 'tv_downgraded,android_vr,tv,web_embedded,mweb'}},
             }
             if playlist and platform == 'YouTube' and FFMPEG:
                 opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
