@@ -116,7 +116,7 @@ def do_download(task_id, url, dtype):
         url = resolve_short_url(url)
 
         # TIKTOK PHOTO  gallery-dl
-        if is_tiktok_photo(url):
+        if False:  # was: is_tiktok_photo
             do_gallery_dl(task_id, url, dtype, platform)
             return
 
