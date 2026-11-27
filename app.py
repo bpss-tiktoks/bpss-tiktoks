@@ -125,7 +125,7 @@ def do_download(task_id, url, dtype):
         if dtype == 'video':
             opts = {
                 'quiet': True, 'no_warnings': True,
-                'format': 'bv*+ba/b' if FFMPEG else 'best/b',
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best' if FFMPEG else 'best',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
@@ -138,7 +138,7 @@ def do_download(task_id, url, dtype):
         else:
             opts = {
                 'quiet': True, 'no_warnings': True,
-                'format': 'bestaudio/best',
+                'format': 'bestaudio[ext=m4a]/bestaudio/best[ext=webm]/best',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
