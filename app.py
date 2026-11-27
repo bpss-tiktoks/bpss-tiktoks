@@ -18,7 +18,7 @@ MAX_FILES = 15
 RATE_LIMIT = 5
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-VALID_DOMAINS = ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch', 'youtube.com', 'youtu.be', 'x.com', 'twitter.com']
+VALID_DOMAINS = ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch', 'x.com', 'twitter.com']
 
 req_log = defaultdict(list)
 tasks = {}
@@ -83,9 +83,6 @@ def is_tiktok_photo(url):
     """Detectar URL de foto/slideshow de TikTok"""
     return ('/photo/' in url or '/photo?' in url) and 'tiktok.com' in url
 
-def is_youtube_playlist(url):
-    return 'list=' in url and ('youtube.com' in url or 'youtu.be' in url)
-
 def get_file_size(fpath):
     try:
         size = os.path.getsize(fpath)
@@ -120,19 +117,14 @@ def do_download(task_id, url, dtype):
             do_gallery_dl(task_id, url, dtype, platform)
             return
 
-        playlist = is_youtube_playlist(url)
-
-        if dtype == 'video':
+                if dtype == 'video':
             opts = {
                 'quiet': True, 'no_warnings': True,
                 'format': 'bestvideo+bestaudio/best' if FFMPEG else 'best',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
-                'noplaylist': not playlist,
-                'http_headers': {'User-Agent': UA},
-                'cookiefile': os.path.join(BASE, 'cookies.txt') if os.path.exists(os.path.join(BASE, 'cookies.txt')) else None,
-                'retries': 3,
-                'extractor_args': {'youtube': {'player_client': 'web,android_vr,tv,mweb'}},
-            }
+                                'http_headers': {'User-Agent': UA},
+                                'retries': 3,
+                            }
             if FFMPEG:
                 opts['merge_output_format'] = 'mp4'
         else:
@@ -140,28 +132,15 @@ def do_download(task_id, url, dtype):
                 'quiet': True, 'no_warnings': True,
                 'format': 'bestaudio/best',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
-                'noplaylist': not playlist,
-                'http_headers': {'User-Agent': UA},
-                'cookiefile': os.path.join(BASE, 'cookies.txt') if os.path.exists(os.path.join(BASE, 'cookies.txt')) else None,
-                'retries': 3,
-                'extractor_args': {'youtube': {'player_client': 'web,android_vr,tv,mweb'}},
-            }
+                                'http_headers': {'User-Agent': UA},
+                                'retries': 3,
+                            }
             if playlist and platform == 'YouTube' and FFMPEG:
                 opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}]
 
-        if playlist:
-            opts['playlist_items'] = '1-10'
-            opts['outtmpl'] = os.path.join(DOWNLOAD_DIR, '%(playlist_index)02d_%(id)s.%(ext)s')
-
-        with yt_dlp.YoutubeDL(opts) as ydl:
+                with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            if playlist and info:
-                fpath = find_newest_in_dir(DOWNLOAD_DIR)
-                fname = os.path.relpath(fpath, DOWNLOAD_DIR) if fpath else None
-                count = len([f for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))])
-                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': f'Playlist ({count} archivos)', 'size': '', 'platform': platform}
-            else:
-                fname = os.path.basename(ydl.prepare_filename(info))
+            else:\n                fname = os.path.basename(ydl.prepare_filename(info))
                 fpath = os.path.join(DOWNLOAD_DIR, fname)
                 fsize = get_file_size(fpath) if os.path.exists(fpath) else ''
                 title = info.get('title', '')[:80] if info else ''
