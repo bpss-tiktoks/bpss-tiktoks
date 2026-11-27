@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, send_file, redirect, jsonify, Response
+from flask import Flask, render_template, request, send_file, redirect, jsonify, Response
 import yt_dlp, os, subprocess, urllib.request, time, threading, json, uuid, requests
 from collections import defaultdict
 
@@ -13,9 +13,9 @@ GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 GROQ_MODEL = 'openai/gpt-oss-120b'
 MAX_TOKENS = 1000
 HISTORY_LIMIT = 10
-CLEANUP_AGE = 1800
-MAX_FILES = 15
-RATE_LIMIT = 5
+CLEANUP_AGE = 7200
+MAX_FILES = 50
+RATE_LIMIT = 10
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 VALID_DOMAINS = ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch', 'youtube.com', 'youtu.be', 'x.com', 'twitter.com']
