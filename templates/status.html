@@ -1,95 +1,89 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
-<head><title>bpss..tiktok</title><link rel="icon" type="image/png" href="/static/logo.png"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/style.css"></head>
-<body><button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>bpss..tiktok</title>
+<link rel="icon" type="image/png" href="/static/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
 <div class="container">
 <h1>Bpss TikToks</h1>
-<p class="warn">Videos/fotos privados no se pueden descargar. Solo publicos.</p>
+<p class="warn">Videos privados no se pueden descargar. Solo enlaces publicos en HD.</p>
 <div id="msg">
 <div class="spinner"></div>
 <p class="loading-text" id="loadText">bpss..tiktok</p>
 </div>
 <script>
-var id='{{ task_id }}';
-var tries=0;
-var maxTries=300;
-var msgs=\['bpss..tiktok','Procesando...','Casi listo...','Trabajando...'\];
-var mi=0;
-function check(){
-tries++;
-if(tries>maxTries){
-document.getElementById('msg').innerHTML='<p class="error-text">Timeout (10 min). Si es una playlist, intenta con menos videos.</p><a href="/" class="link-back">Volver</a>';
-return;
+var id = '{{ task_id }}';
+var tries = 0;
+var maxTries = 60;
+var msgs = ['bpss..tiktok', 'Procesando video HD...', 'Obteniendo enlace...', 'Casi listo...'];
+var mi = 0;
+
+function check() {
+  tries++;
+  if (tries > maxTries) {
+    document.getElementById('msg').innerHTML = '<p class="error-text">La descarga tardo demasiado en el servidor gratuito.</p><a href="/" class="link-back">Volver</a>';
+    return;
+  }
+  if (tries % 6 === 0 && tries < maxTries) {
+    mi = (mi + 1) % msgs.length;
+    var lt = document.getElementById('loadText');
+    if (lt) lt.textContent = msgs[mi];
+  }
+  fetch('/api/status/' + id)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.status === 'done') {
+        var dlUrl = d.download_url || ('/files/' + d.file);
+        var fullUrl = location.origin + dlUrl;
+        var shareText = 'Descarga aqui: ' + fullUrl;
+        var dlCount = parseInt(localStorage.getItem('bpss_dl_count') || '0', 10) + 1;
+        localStorage.setItem('bpss_dl_count', dlCount);
+        var info = '';
+        if (d.title) info += '<p class="file-title">' + d.title + '</p>';
+        document.getElementById('msg').innerHTML =
+          '<p class="success-text">Listo</p>' + info +
+          '<a href="' + dlUrl + '" class="btn-download">Descargar video HD</a>' +
+          '<div class="actions">' +
+          '<button class="btn-action" onclick="navigator.clipboard.writeText(\'' + fullUrl + '\');this.textContent=\'Copiado\'">Copiar</button>' +
+          '<a class="btn-action" href="https://wa.me/?text=' + encodeURIComponent(shareText) + '" target="_blank">WhatsApp</a>' +
+          '<a class="btn-action" href="https://t.me/share/url?url=' + encodeURIComponent(fullUrl) + '" target="_blank">Telegram</a>' +
+          '</div>' +
+          '<form method="POST" action="/" class="next-form">' +
+          '<input type="text" name="url" placeholder="Otra URL de video...">' +
+          '<button type="submit" name="type" value="video">Video HD</button>' +
+          '<button type="submit" name="type" value="audio">Audio</button>' +
+          '</form>';
+      } else if (d.status === 'error') {
+        document.getElementById('msg').innerHTML = '<p class="error-text">' + (d.error || 'Error al descargar.') + '</p><a href="/" class="link-back">Volver</a>';
+      } else {
+        setTimeout(check, 2000);
+      }
+    })
+    .catch(function() {
+      setTimeout(check, 2500);
+    });
 }
-if(tries%15===0&&tries<maxTries){mi=(mi+1)%msgs.length;var lt=document.getElementById('loadText');if(lt)lt.textContent=msgs[mi];}
-fetch('/api/status/'+id).then(function(r){return r.json()}).then(function(d){
-if(d.status==='done'){
-var dlUrl=location.origin+'/download/'+d.file;
-var shareText='Descarga aqui: '+dlUrl;
-var dlCount=parseInt(localStorage.getItem('bpss_dl_count')||'0')+1;
-localStorage.setItem('bpss_dl_count',dlCount);
-var info='';
-if(d.title)info+='<p class="file-title">'+d.title+'</p>';
-if(d.size)info+='<p class="file-size">'+d.size+'</p>';
-if(d.platform)info+='<p class="file-platform">'+d.platform+'</p>';if(d.thumbnail)info+='<img src="'+d.thumbnail+'" onerror="this.style.display=\'none\'" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:.5rem">';
-document.getElementById('msg').innerHTML=
-'<p class="success-text">Listo</p>'+info+
-'<a href="'+dlUrl+'" class="btn-download">Descargar</a>'+
-'<div class="actions">'+
-'<button class="btn-action" onclick="navigator.clipboard.writeText(\''+dlUrl+'\');this.textContent=\'Copiado\'">Copiar</button>'+
-'<a class="btn-action" href="https://wa.me/?text='+encodeURIComponent(shareText)+'" target="_blank">WhatsApp</a>'+
-'<a class="btn-action" href="https://t.me/share/url?url='+encodeURIComponent(dlUrl)+'" target="_blank">Telegram</a>'+
-'</div>'+
-'<form method="POST" action="/" class="next-form">'+
-'<input type="text" name="url" placeholder="Otra URL...">'+
-'<button type="submit" name="type" value="video">Video/Foto</button>'+
-'<button type="submit" name="type" value="audio">Audio</button>'+
-'</form>';
-}else if(d.status==='error'){
-document.getElementById('msg').innerHTML='<p class="error-text">'+(d.error||'Error')+'</p><a href="/" class="link-back">Volver</a>';
-}else{
-setTimeout(check,2000);
-}
-}).catch(function(){setTimeout(check,3000)});
-}
-setTimeout(check,2000);
+setTimeout(check, 1500);
 </script>
 </div>
-<script>var isDark=localStorage.getItem("bpss_dark")==="1";function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?"\u2600\uFE0F":"\u263E\uFE0F";}applyTheme();document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};</script>
 <script>
-(function () {
-  const observer = new MutationObserver(() => {
-    const btn = document.querySelector('a[href*="/download/"], button[data-download], .download-btn, #download-btn');
-    if (!btn) return;
-    if (document.getElementById("portada-descarga-auto")) return;
-    const thumb = window.__ULTIMA_PORTADA_DESCARGA__ || "";
-    if (!thumb) return;
-    const img = document.createElement("img");
-    img.id = "portada-descarga-auto";
-    img.src = thumb;
-    img.alt = "Portada del video";
-    img.style.cssText = "display:block;max-width:260px;width:100%;border-radius:12px;margin:10px auto;object-fit:cover;";
-    btn.parentNode.insertBefore(img, btn);
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-  const origFetch = window.fetch;
-  if (origFetch) {
-    window.fetch = async function (...args) {
-      const res = await origFetch.apply(this, args);
-      try {
-        const u = String(args[0] || "");
-        if (u.includes("/api/status/")) {
-          const clone = res.clone();
-          const data = await clone.json();
-          if (data && (data.thumbnail || data.cover)) {
-            window.__ULTIMA_PORTADA_DESCARGA__ = data.thumbnail || data.cover;
-          }
-        }
-      } catch (e) {}
-      return res;
-    };
-  }
-})();
+var isDark = localStorage.getItem("bpss_dark") === "1";
+function applyTheme() {
+  document.body.classList.toggle("dark", isDark);
+  document.getElementById("themeToggle").textContent = isDark ? "\u2600\uFE0F" : "\u263E\uFE0F";
+}
+applyTheme();
+document.getElementById("themeToggle").onclick = function() {
+  isDark = !isDark;
+  localStorage.setItem("bpss_dark", isDark ? "1" : "0");
+  applyTheme();
+};
 </script>
 </body>
 </html>
