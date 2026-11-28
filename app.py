@@ -111,6 +111,15 @@ def find_newest_in_dir(directory):
 
 #  DESCARGA PRINCIPAL 
 def do_download(task_id, url, dtype):
+    try:
+        if _intentar_foto_mp4_seguro(task_id, url):
+            return
+    except Exception as _exc_foto:
+        if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
+            tasks[task_id]["status"] = "error"
+            tasks[task_id]["error"] = str(_exc_foto)
+            return
+
     platform = detect_platform(url)
     try:
         url = resolve_short_url(url)
@@ -183,6 +192,15 @@ def do_download(task_id, url, dtype):
 
 #  GALLERY-DL CORREGIDO 
 def do_gallery_dl(task_id, url, dtype, platform):
+    try:
+        if _intentar_foto_mp4_seguro(task_id, url):
+            return
+    except Exception as _exc_foto:
+        if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
+            tasks[task_id]["status"] = "error"
+            tasks[task_id]["error"] = str(_exc_foto)
+            return
+
     try:
         outdir = os.path.join(DOWNLOAD_DIR, 'photos')
         os.makedirs(outdir, exist_ok=True)
@@ -353,3 +371,23 @@ def google_verify():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+def _intentar_foto_mp4_seguro(task_id, url):
+    if "is_tiktok_photo" not in globals() or "convertir_foto_o_animada_a_mp4" not in globals():
+        return False
+    if not is_tiktok_photo(url):
+        return False
+    out_dir = globals().get("DOWNLOAD_DIR") or globals().get("UPLOAD_FOLDER") or globals().get("OUTPUT_DIR") or os.getcwd()
+    os.makedirs(out_dir, exist_ok=True)
+    out_name = f"{task_id}_foto_animada.mp4"
+    out_path = os.path.join(out_dir, out_name)
+    convertir_foto_o_animada_a_mp4(url, out_path)
+    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        raise RuntimeError("No se genero el MP4 de la foto o foto animada.")
+    if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
+        tasks[task_id]["status"] = "done"
+        tasks[task_id]["progress"] = 100
+        tasks[task_id]["file"] = out_name
+        tasks[task_id]["filename"] = out_name
+        tasks[task_id]["filepath"] = out_path
+    return True
