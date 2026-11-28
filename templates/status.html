@@ -6,7 +6,7 @@
 <title>Descargando...</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body><button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
 <div class="container">
 <h1>Bpss TikToks</h1>
 <p class="warn">Videos/fotos privados no se pueden descargar. Solo publicos.</p>
@@ -60,5 +60,5 @@ setTimeout(check,2000);
 setTimeout(check,2000);
 </script>
 </div>
-</body>
+<script>var isDark=localStorage.getItem("bpss_dark")==="1";function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?"\u2600\uFE0F":"\u263E\uFE0F";}applyTheme();document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};</script></body>
 </html>
