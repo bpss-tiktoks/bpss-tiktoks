@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
 
@@ -27,6 +28,7 @@ HAS_FFMPEG = shutil.which("ffmpeg") is not None
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
 VIDEO_EXTS = (".mp4", ".webm", ".mkv", ".mov")
 AUDIO_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
+MAX_FILE_AGE_SECONDS = 1800
 
 
 def _estado_path(task_id):
@@ -56,11 +58,18 @@ def _cargar_estado_disco(task_id):
 
 def _set_task(task_id, **fields):
     fields.pop("task_id", None)
+    fields["updated_at"] = time.time()
     with tasks_lock:
         curr = tasks.get(task_id)
         if not isinstance(curr, dict):
             curr = _cargar_estado_disco(task_id) or {}
         curr.update(fields)
+        if "download_url" in curr and curr["download_url"] and not curr.get("url"):
+            curr["url"] = curr["download_url"]
+        if "thumbnail" in curr and curr["thumbnail"] and not curr.get("cover"):
+            curr["cover"] = curr["thumbnail"]
+        if "cover" in curr and curr["cover"] and not curr.get("thumbnail"):
+            curr["thumbnail"] = curr["cover"]
         tasks[task_id] = curr
         snap = dict(curr)
     _guardar_estado_disco(task_id, snap)
@@ -71,13 +80,40 @@ def _get_task(task_id):
     with tasks_lock:
         curr = tasks.get(task_id)
         if isinstance(curr, dict):
-            return dict(curr)
-    disk = _cargar_estado_disco(task_id)
-    if isinstance(disk, dict):
-        with tasks_lock:
-            tasks[task_id] = dict(disk)
-        return dict(disk)
-    return None
+            snap = dict(curr)
+        else:
+            snap = None
+    if snap is None:
+        disk = _cargar_estado_disco(task_id)
+        if isinstance(disk, dict):
+            with tasks_lock:
+                tasks[task_id] = dict(disk)
+            snap = dict(disk)
+    if isinstance(snap, dict):
+        if snap.get("status") == "processing":
+            updated = snap.get("updated_at") or 0
+            if time.time() - updated > 150:
+                snap["status"] = "error"
+                snap["progress"] = 100
+                snap["error"] = "La descarga tardo demasiado en responder en el servidor."
+                _set_task(task_id, **snap)
+    return snap
+
+
+def _limpiar_archivos_antiguos():
+    ahora = time.time()
+    try:
+        for fname in os.listdir(DOWNLOAD_DIR):
+            fpath = os.path.join(DOWNLOAD_DIR, fname)
+            if not os.path.isfile(fpath):
+                continue
+            try:
+                if ahora - os.path.getmtime(fpath) > MAX_FILE_AGE_SECONDS:
+                    os.remove(fpath)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 def _extraer_portada(info):
@@ -129,7 +165,11 @@ def _convertir_imagen_a_mp4(img_path, mp4_path, duracion=4):
 
 def _buscar_archivo_final(task_id, modo="video"):
     candidatos = []
-    for fname in os.listdir(DOWNLOAD_DIR):
+    try:
+        entries = os.listdir(DOWNLOAD_DIR)
+    except Exception:
+        return None
+    for fname in entries:
         if not fname.startswith(task_id):
             continue
         if fname.endswith((".part", ".ytdl", ".temp", ".tmp", ".json")):
@@ -166,13 +206,13 @@ def _construir_perfiles(outtmpl, modo):
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
-        "socket_timeout": 25,
+        "socket_timeout": 20,
         "retries": 2,
         "fragment_retries": 2,
         "user_agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/124.0.0.0 Safari/537.36"
+            "Chrome/126.0.0.0 Safari/537.36"
         ),
     }
 
@@ -211,7 +251,7 @@ def _construir_perfiles(outtmpl, modo):
 
 def _intentar_cli_fallback(url_limpia, outtmpl, modo):
     try:
-        cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist", "-o", outtmpl]
+        cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist", "--socket-timeout", "20", "-o", outtmpl]
         if modo in ("audio", "mp3"):
             if HAS_FFMPEG:
                 cmd += ["-x", "--audio-format", "mp3", "-f", "bestaudio/best"]
@@ -220,12 +260,13 @@ def _intentar_cli_fallback(url_limpia, outtmpl, modo):
         else:
             cmd += ["-f", "bestvideo+bestaudio/best[ext=mp4]/best"]
         cmd.append(url_limpia)
-        subprocess.run(cmd, timeout=90, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(cmd, timeout=75, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
 
 def do_download(task_id, url, mode="video"):
+    _limpiar_archivos_antiguos()
     portada = None
     titulo = None
     modo_limpio = (mode or "video").strip().lower()
@@ -243,7 +284,7 @@ def do_download(task_id, url, mode="video"):
         if yt_dlp is not None:
             perfiles = _construir_perfiles(outtmpl, modo_limpio)
             for idx, opts in enumerate(perfiles, start=1):
-                _set_task(task_id, status="processing", progress=min(80, 15 + idx * 15))
+                _set_task(task_id, status="processing", progress=min(75, 15 + idx * 20))
                 try:
                     with yt_dlp.YoutubeDL(opts) as ydl:
                         info = ydl.extract_info(url_limpia, download=True)
@@ -274,7 +315,7 @@ def do_download(task_id, url, mode="video"):
                         break
 
         if not archivo_final:
-            _set_task(task_id, status="processing", progress=88)
+            _set_task(task_id, status="processing", progress=85)
             _intentar_cli_fallback(url_limpia, outtmpl, modo_limpio)
             archivo_final = _buscar_archivo_final(task_id, modo_limpio)
 
@@ -283,13 +324,14 @@ def do_download(task_id, url, mode="video"):
 
         ruta_actual = os.path.join(DOWNLOAD_DIR, archivo_final)
         if modo_limpio in ("video", "photo_mp4", "foto_mp4") and archivo_final.lower().endswith(IMAGE_EXTS):
+            _set_task(task_id, status="processing", progress=92)
             base_sin_ext = os.path.splitext(archivo_final)[0]
             mp4_nombre = f"{base_sin_ext}.mp4"
             mp4_ruta = os.path.join(DOWNLOAD_DIR, mp4_nombre)
             if _convertir_imagen_a_mp4(ruta_actual, mp4_ruta):
                 archivo_final = mp4_nombre
 
-        dl_url = f"/download/{archivo_final}"
+        dl_url = f"/files/{archivo_final}"
         _set_task(
             task_id,
             status="done",
@@ -448,7 +490,6 @@ def status_page(task_id):
 
 
 @app.route("/api/download", methods=["GET", "POST"])
-@app.route("/download", methods=["GET", "POST"])
 @app.route("/start", methods=["GET", "POST"])
 def start_download():
     url, mode = _extraer_campos()
@@ -480,15 +521,12 @@ def api_status(task_id):
             "cover": None,
             "error": "Tarea no encontrada.",
         }), 200
-    if "thumbnail" not in t and t.get("cover"):
-        t["thumbnail"] = t["cover"]
-    if "cover" not in t and t.get("thumbnail"):
-        t["cover"] = t["thumbnail"]
     return jsonify(t), 200
 
 
-@app.route("/download/<path:filename>", methods=["GET"])
 @app.route("/files/<path:filename>", methods=["GET"])
+@app.route("/archivo/<path:filename>", methods=["GET"])
+@app.route("/download/<path:filename>", methods=["GET"])
 def serve_file(filename):
     safe_name = os.path.basename(filename)
     full_path = os.path.join(DOWNLOAD_DIR, safe_name)
@@ -503,7 +541,7 @@ def serve_file(filename):
 
 @app.route("/healthz", methods=["GET"])
 def healthz():
-    return jsonify({"ok": True}), 200
+    return jsonify({"ok": True, "ffmpeg": HAS_FFMPEG, "yt_dlp": yt_dlp is not None}), 200
 
 
 @app.errorhandler(404)
@@ -537,6 +575,3 @@ def handle_500(e):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
