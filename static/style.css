@@ -87,3 +87,68 @@ input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
   border-color: #c084fc !important;
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.22) !important;
 }
+
+/* Efecto Liquid Glass negro y morado */
+body {
+  background:
+    radial-gradient(circle at 18% 15%, rgba(168, 85, 247, 0.28), transparent 42%),
+    radial-gradient(circle at 82% 22%, rgba(109, 40, 217, 0.24), transparent 45%),
+    radial-gradient(circle at 50% 88%, rgba(192, 132, 252, 0.16), transparent 50%),
+    linear-gradient(180deg, #09070e 0%, #050408 100%) !important;
+  color: #f5f3ff !important;
+  min-height: 100vh;
+}
+
+.container, .card, main, .box, .chat-box, .panel {
+  background: rgba(20, 15, 32, 0.48) !important;
+  backdrop-filter: blur(20px) saturate(165%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(165%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-top-color: rgba(233, 213, 255, 0.34) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -12px 24px rgba(126, 34, 206, 0.12) !important;
+}
+
+button, .btn, input[type="submit"], .btn-action {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.52), rgba(88, 28, 135, 0.42)) !important;
+  backdrop-filter: blur(12px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-top-color: rgba(243, 232, 255, 0.45) !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 8px 24px rgba(107, 33, 168, 0.32),
+    inset 0 1px 1px rgba(255, 255, 255, 0.28) !important;
+  transition: transform 0.18s ease, box-shadow 0.22s ease, background 0.22s ease !important;
+}
+
+button:hover, .btn:hover, input[type="submit"]:hover, .btn-action:hover {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.68), rgba(107, 33, 168, 0.55)) !important;
+  box-shadow:
+    0 12px 30px rgba(168, 85, 247, 0.48),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+}
+
+input[type="text"], input[type="url"], textarea, select {
+  background: rgba(15, 11, 24, 0.45) !important;
+  backdrop-filter: blur(14px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-top-color: rgba(216, 180, 254, 0.28) !important;
+  border-radius: 14px !important;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08) !important;
+}
+
+input[type="text"]:focus, input[type="url"]:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-color: rgba(216, 180, 254, 0.65) !important;
+  box-shadow:
+    0 0 0 3px rgba(168, 85, 247, 0.24),
+    inset 0 1px 2px rgba(255, 255, 255, 0.16) !important;
+}
