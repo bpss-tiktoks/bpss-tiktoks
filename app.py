@@ -160,7 +160,7 @@ def do_download(task_id, url, dtype):
                 fpath = os.path.join(DOWNLOAD_DIR, fname)
                 fsize = get_file_size(fpath) if os.path.exists(fpath) else ''
                 title = info.get('title', '')[:80] if info else ''
-                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform}
+                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform, 'thumbnail': info.get('thumbnail','') if info else ''}
     except Exception as e:
         err_msg = str(e)[:500]
         if '10231' in err_msg or '10204' in err_msg:
