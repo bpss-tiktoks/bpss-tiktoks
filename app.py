@@ -129,7 +129,7 @@ def do_download(task_id, url, dtype):
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_video.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
-                'retries': 3,
+                'retries': 3, 'socket_timeout': 30, 'download_ranges': True,
             }
             if FFMPEG:
                 opts['merge_output_format'] = 'mp4'
@@ -140,7 +140,7 @@ def do_download(task_id, url, dtype):
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
-                'retries': 3,
+                'retries': 3, 'socket_timeout': 30, 'download_ranges': True,
             }
 
         if playlist:
