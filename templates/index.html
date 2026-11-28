@@ -66,5 +66,33 @@ function useSug(b){document.getElementById("chatInput").value=b.textContent;send
 function clearChat(){chatHistory=[];document.getElementById("chatMsgs").innerHTML="";document.getElementById("sugArea").innerHTML="";}
 document.getElementById("chatInput").addEventListener("keydown",function(e){if(e.key==="Enter")sendChat();});
 </script>
+<p id="aviso-jorgelis-10m" style="font-size:1.15rem;margin:14px 0;text-align:center;">jorgelis báñate</p>
+<script>
+(function () {
+  const key = "bpss_jorgelis_10m_expira";
+  const el = document.getElementById("aviso-jorgelis-10m");
+  if (!el) return;
+
+  const ahora = Date.now();
+  let expira = Number(localStorage.getItem(key) || "0");
+
+  if (!expira) {
+    expira = ahora + 10 * 60 * 1000;
+    localStorage.setItem(key, String(expira));
+  }
+
+  function eliminar() {
+    if (el && el.parentNode) {
+      el.remove();
+    }
+  }
+
+  if (ahora >= expira) {
+    eliminar();
+  } else {
+    setTimeout(eliminar, expira - ahora);
+  }
+})();
+</script>
 </body>
 </html>
