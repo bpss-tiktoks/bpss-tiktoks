@@ -390,12 +390,18 @@ def handle_405(e):
         if url:
             task_id = _crear_y_lanzar_tarea(url, mode)
             return redirect(f"/status/{task_id}")
-    return redirect(url_for("index"))
+    return redirect("/")
 
 
 @app.errorhandler(500)
 def handle_500(e):
-    return jsonify({"status": "error", "error": "Error interno del servidor"}), 500
+    detalle = str(getattr(e, "original_exception", e) or "Error interno del servidor")
+    if request.path.startswith("/api/") or request.is_json:
+        return jsonify({"status": "error", "error": detalle}), 500
+    try:
+        return _render_tpl(["index.html", "status.html"])
+    except Exception:
+        return jsonify({"status": "error", "error": detalle}), 500
 
 
 if __name__ == "__main__":
