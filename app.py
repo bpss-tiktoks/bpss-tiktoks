@@ -134,7 +134,7 @@ def do_download(task_id, url, mode="video"):
         )
 
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
     for tpl in ("index.html", "status.html"):
         if os.path.exists(os.path.join(BASE_DIR, "templates", tpl)):
@@ -151,8 +151,8 @@ def status_page(task_id):
     return jsonify(_get_task(task_id) or {"status": "error", "error": "Tarea no encontrada"}), 200
 
 
-@app.route("/api/download", methods=["POST"])
-@app.route("/download", methods=["POST"])
+@app.route("/api/download", methods=["GET", "POST"])
+@app.route("/download", methods=["GET", "POST"])
 def start_download():
     data = request.get_json(silent=True) or {}
     url = data.get("url") or request.form.get("url") or ""
