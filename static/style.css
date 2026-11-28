@@ -1,4 +1,4 @@
-*{margin:0;padding:0;box-sizing:border-box}
+﻿*{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#F0F2F5;--fg:#1C1E21;--muted:#65676B;--border:#E4E6EB;--accent:#1877F2;--accent-fg:#fff;--card:#fff;--error:#E41E3F;--success:#31A24C;--shadow:0 1px 2px rgba(0,0,0,.1),0 2px 8px rgba(0,0,0,.08)}
 body.dark{--bg:#18191A;--fg:#E4E6EB;--muted:#B0B3B8;--border:#3A3B3C;--accent:#1877F2;--accent-fg:#fff;--card:#242526;--error:#FA7884;--success:#45BD62;--shadow:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.2)}
 body{font-family:Helvetica,Arial,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg);transition:background .3s}
@@ -55,100 +55,64 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(24
 .link-back{display:inline-block;margin-top:1rem;font-size:.8rem;color:var(--muted);text-decoration:none}
 .link-back:hover{color:var(--accent)}
 @media(max-width:480px){.container{max-width:100%;padding:1.5rem 1.2rem}h1{font-size:1.4rem}}
+/* Soporte real para tema claro y oscuro con acentos morados Liquid Glass */
+:root {
+  --bg-light: radial-gradient(circle at 20% 15%, rgba(168, 85, 247, 0.16), transparent 45%), linear-gradient(180deg, #f8f5ff 0%, #efe9fc 100%);
+  --text-light: #18122b;
+  --surface-light: rgba(255, 255, 255, 0.72);
+  --border-light: rgba(126, 34, 206, 0.22);
 
-/* Estetica viva negro y morado Bpss TikToks */
-body {
-  background: radial-gradient(circle at top, #24103a 0%, #0b0910 60%, #060508 100%) !important;
-  color: #f5f3ff !important;
-}
-.container, .card, main, .box {
-  border-color: rgba(168, 85, 247, 0.28) !important;
-  box-shadow: 0 14px 40px rgba(88, 28, 135, 0.25) !important;
-}
-button, .btn, input[type="submit"] {
-  background: linear-gradient(135deg, #7e22ce, #a855f7) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(216, 180, 254, 0.35) !important;
-  box-shadow: 0 4px 18px rgba(147, 51, 234, 0.35) !important;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
-}
-button:hover, .btn:hover, input[type="submit"]:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 24px rgba(168, 85, 247, 0.55) !important;
-  filter: brightness(1.08) !important;
-}
-input[type="text"], input[type="url"], textarea {
-  border-color: rgba(168, 85, 247, 0.35) !important;
-  background-color: rgba(17, 12, 26, 0.85) !important;
-  color: #ffffff !important;
-}
-input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
-  outline: none !important;
-  border-color: #c084fc !important;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.22) !important;
+  --bg-dark: radial-gradient(circle at 18% 15%, rgba(168, 85, 247, 0.28), transparent 42%), radial-gradient(circle at 82% 22%, rgba(109, 40, 217, 0.24), transparent 45%), linear-gradient(180deg, #09070e 0%, #050408 100%);
+  --text-dark: #f5f3ff;
+  --surface-dark: rgba(20, 15, 32, 0.56);
+  --border-dark: rgba(216, 180, 254, 0.26);
 }
 
-/* Efecto Liquid Glass negro y morado */
 body {
-  background:
-    radial-gradient(circle at 18% 15%, rgba(168, 85, 247, 0.28), transparent 42%),
-    radial-gradient(circle at 82% 22%, rgba(109, 40, 217, 0.24), transparent 45%),
-    radial-gradient(circle at 50% 88%, rgba(192, 132, 252, 0.16), transparent 50%),
-    linear-gradient(180deg, #09070e 0%, #050408 100%) !important;
-  color: #f5f3ff !important;
+  background: var(--bg-light);
+  color: var(--text-light);
   min-height: 100vh;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+body.dark {
+  background: var(--bg-dark);
+  color: var(--text-dark);
 }
 
 .container, .card, main, .box, .chat-box, .panel {
-  background: rgba(20, 15, 32, 0.48) !important;
-  backdrop-filter: blur(20px) saturate(165%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(165%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-top-color: rgba(233, 213, 255, 0.34) !important;
-  border-radius: 22px !important;
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -12px 24px rgba(126, 34, 206, 0.12) !important;
+  background: var(--surface-light);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+}
+
+body.dark .container,
+body.dark .card,
+body.dark main,
+body.dark .box,
+body.dark .chat-box,
+body.dark .panel {
+  background: var(--surface-dark);
+  border-color: var(--border-dark);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 button, .btn, input[type="submit"], .btn-action {
-  background: linear-gradient(135deg, rgba(147, 51, 234, 0.52), rgba(88, 28, 135, 0.42)) !important;
-  backdrop-filter: blur(12px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-top-color: rgba(243, 232, 255, 0.45) !important;
-  border-radius: 14px !important;
-  box-shadow:
-    0 8px 24px rgba(107, 33, 168, 0.32),
-    inset 0 1px 1px rgba(255, 255, 255, 0.28) !important;
-  transition: transform 0.18s ease, box-shadow 0.22s ease, background 0.22s ease !important;
+  background: linear-gradient(135deg, #7e22ce, #a855f7);
+  color: #ffffff;
+  border: 1px solid rgba(216, 180, 254, 0.35);
+  border-radius: 12px;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 button:hover, .btn:hover, input[type="submit"]:hover, .btn-action:hover {
-  transform: translateY(-2px) !important;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.68), rgba(107, 33, 168, 0.55)) !important;
-  box-shadow:
-    0 12px 30px rgba(168, 85, 247, 0.48),
-    inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(147, 51, 234, 0.42);
+  filter: brightness(1.06);
 }
 
-input[type="text"], input[type="url"], textarea, select {
-  background: rgba(15, 11, 24, 0.45) !important;
-  backdrop-filter: blur(14px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-top-color: rgba(216, 180, 254, 0.28) !important;
-  border-radius: 14px !important;
-  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08) !important;
-}
-
-input[type="text"]:focus, input[type="url"]:focus, textarea:focus, select:focus {
-  outline: none !important;
-  border-color: rgba(216, 180, 254, 0.65) !important;
-  box-shadow:
-    0 0 0 3px rgba(168, 85, 247, 0.24),
-    inset 0 1px 2px rgba(255, 255, 255, 0.16) !important;
+.theme-toggle {
+  cursor: pointer;
 }
