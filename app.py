@@ -153,14 +153,16 @@ def do_download(task_id, url, dtype):
                 fpath = find_newest_in_dir(DOWNLOAD_DIR)
                 fname = os.path.relpath(fpath, DOWNLOAD_DIR) if fpath else None
                 count = len([f for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))])
-                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': f'Playlist ({count} archivos)', 'size': '', 'platform': platform}
+                thumb = info.get('thumbnail') or (info.get('thumbnails')[-1].get('url') if info and info.get('thumbnails') else '')
+                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': f'Playlist ({count} archivos)', 'size': '', 'platform': platform, 'thumbnail': thumb}
             else:
                 fname = os.path.basename(ydl.prepare_filename(info))
                 fpath = os.path.join(DOWNLOAD_DIR, fname)
                 fsize = get_file_size(fpath) if os.path.exists(fpath) else ''
                 title = info.get('title', '')[:80] if info else ''
                 thumb = info.get('thumbnail') or (info.get('thumbnails')[-1].get('url') if info and info.get('thumbnails') else '')
-                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform, 'thumbnail': thumb}
+                thumb = info.get('thumbnail') or (info.get('thumbnails')[-1].get('url') if info and info.get('thumbnails') else '')
+                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform, 'thumbnail': thumb, 'thumbnail': thumb}
     except Exception as e:
         err_msg = str(e)[:500]
         if '10231' in err_msg or '10204' in err_msg:
@@ -210,7 +212,8 @@ def do_gallery_dl(task_id, url, dtype, platform):
             # Usar el primer archivo nuevo
             fpath = sorted(new_files)[0]
             rel = os.path.relpath(fpath, DOWNLOAD_DIR)
-            tasks[task_id] = {'status': 'done', 'file': rel, 'error': None, 'title': f'{platform} Photos ({len(new_files)} archivos)', 'size': get_file_size(fpath), 'platform': platform}
+            thumb = info.get('thumbnail') or (info.get('thumbnails')[-1].get('url') if info and info.get('thumbnails') else '')
+            tasks[task_id] = {'status': 'done', 'file': rel, 'error': None, 'title': f'{platform} Photos ({len(new_files)} archivos)', 'size': get_file_size(fpath), 'platform': platform, 'thumbnail': thumb}
         else:
             # Si no hay archivos nuevos, mostrar error de gallery-dl
             err = result.stderr.strip()[:300] if result.stderr else ''

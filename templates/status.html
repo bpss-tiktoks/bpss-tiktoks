@@ -36,7 +36,7 @@ localStorage.setItem('bpss_dl_count',dlCount);
 var info='';
 if(d.title)info+='<p class="file-title">'+d.title+'</p>';
 if(d.size)info+='<p class="file-size">'+d.size+'</p>';
-if(d.platform)info+='<p class="file-platform">''+d.platform+''</p>';if(d.thumbnail)info+='<img src="''+d.thumbnail+''" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:.5rem">';
+if(d.platform)info+='<p class="file-platform">'+d.platform+'</p>';if(d.thumbnail)info+='<img src="'+d.thumbnail+'" onerror="this.style.display=\'none\'" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:.5rem">';
 document.getElementById('msg').innerHTML=
 '<p class="success-text">Listo</p>'+info+
 '<a href="'+dlUrl+'" class="btn-download">Descargar</a>'+
