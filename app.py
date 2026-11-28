@@ -114,10 +114,10 @@ def do_download(task_id, url, dtype):
     platform = detect_platform(url)
     try:
         url = resolve_short_url(url)
-        url = url.replace('/photo/', '/video/')
+        # url = url.replace('/photo/', '/video/')
 
         # TIKTOK PHOTO  gallery-dl
-        if is_tiktok_photo(url):
+        if False:  # was: is_tiktok_photo
             do_gallery_dl(task_id, url, dtype, platform)
             return
 
