@@ -111,29 +111,27 @@ def find_newest_in_dir(directory):
 
 #  DESCARGA PRINCIPAL 
 
-def _adjuntar_portada_tarea(task_id, info=None, out_dir=None):
-    if "tasks" not in globals() or not isinstance(tasks, dict) or task_id not in tasks:
+def _cerrar_tarea_seguro(task_id, status="done", file_rel=None, error_msg=None, info=None):
+    if "tasks" not in globals() or not isinstance(tasks, dict):
         return
+    if task_id not in tasks or not isinstance(tasks[task_id], dict):
+        tasks[task_id] = {}
     t = tasks[task_id]
-    if not isinstance(t, dict):
-        return
-    thumb_url = None
+    t["status"] = status
+    if file_rel is not None:
+        t["file"] = file_rel
+        t["filename"] = file_rel
+    if error_msg is not None:
+        t["error"] = str(error_msg)
+    elif status == "done":
+        t["error"] = None
     if isinstance(info, dict):
-        thumb_url = info.get("thumbnail")
-        if not thumb_url and isinstance(info.get("thumbnails"), list) and info["thumbnails"]:
-            thumb_url = info["thumbnails"][-1].get("url")
-    if thumb_url:
-        t["thumbnail"] = thumb_url
-        t["cover"] = thumb_url
-    base = out_dir or globals().get("DOWNLOAD_DIR") or ""
-    fname = t.get("file") or t.get("filename")
-    if base and fname:
-        stem = os.path.splitext(os.path.basename(fname))[0]
-        for ext in (".jpg", ".jpeg", ".png", ".webp"):
-            cand = os.path.join(base, stem + ext)
-            if os.path.exists(cand) and os.path.getsize(cand) > 0:
-                t["thumbnail_file"] = os.path.basename(cand)
-                break
+        thumb = info.get("thumbnail")
+        if not thumb and isinstance(info.get("thumbnails"), list) and info["thumbnails"]:
+            thumb = info["thumbnails"][-1].get("url")
+        if thumb:
+            t["thumbnail"] = thumb
+            t["cover"] = thumb
 
 def do_download(task_id, url, dtype):
     platform = detect_platform(url)
@@ -161,7 +159,7 @@ def do_download(task_id, url, dtype):
         else:
             opts = {
                 'quiet': True, 'no_warnings': True,
-                'format': 'bestaudio/best',
+                'format': 'ba/b',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, '%(id)s_audio.%(ext)s'),
                 'noplaylist': not playlist,
                 'http_headers': {'User-Agent': UA},
@@ -173,7 +171,7 @@ def do_download(task_id, url, dtype):
             opts['outtmpl'] = os.path.join(DOWNLOAD_DIR, '%(playlist_index)02d_%(id)s.%(ext)s')
 
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+            _info_dl = info = ydl.extract_info(url, download=True)
             if playlist and info:
                 fpath = find_newest_in_dir(DOWNLOAD_DIR)
                 fname = os.path.relpath(fpath, DOWNLOAD_DIR) if fpath else None
