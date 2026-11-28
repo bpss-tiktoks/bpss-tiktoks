@@ -110,25 +110,32 @@ def find_newest_in_dir(directory):
     return None
 
 #  DESCARGA PRINCIPAL 
+
+def _adjuntar_portada_tarea(task_id, info=None, out_dir=None):
+    if "tasks" not in globals() or not isinstance(tasks, dict) or task_id not in tasks:
+        return
+    t = tasks[task_id]
+    if not isinstance(t, dict):
+        return
+    thumb_url = None
+    if isinstance(info, dict):
+        thumb_url = info.get("thumbnail")
+        if not thumb_url and isinstance(info.get("thumbnails"), list) and info["thumbnails"]:
+            thumb_url = info["thumbnails"][-1].get("url")
+    if thumb_url:
+        t["thumbnail"] = thumb_url
+        t["cover"] = thumb_url
+    base = out_dir or globals().get("DOWNLOAD_DIR") or ""
+    fname = t.get("file") or t.get("filename")
+    if base and fname:
+        stem = os.path.splitext(os.path.basename(fname))[0]
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            cand = os.path.join(base, stem + ext)
+            if os.path.exists(cand) and os.path.getsize(cand) > 0:
+                t["thumbnail_file"] = os.path.basename(cand)
+                break
+
 def do_download(task_id, url, dtype):
-    try:
-        if _procesar_foto_o_animada_mp4(task_id, url):
-            return
-    except Exception as _exc_foto:
-        if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
-            tasks[task_id]["status"] = "error"
-            tasks[task_id]["error"] = str(_exc_foto) or "Error al convertir foto/animada a MP4"
-            return
-
-    try:
-        if _intentar_foto_mp4_seguro(task_id, url):
-            return
-    except Exception as _exc_foto:
-        if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
-            tasks[task_id]["status"] = "error"
-            tasks[task_id]["error"] = str(_exc_foto)
-            return
-
     platform = detect_platform(url)
     try:
         url = resolve_short_url(url)
@@ -201,24 +208,6 @@ def do_download(task_id, url, dtype):
 
 #  GALLERY-DL CORREGIDO 
 def do_gallery_dl(task_id, url, dtype, platform):
-    try:
-        if _procesar_foto_o_animada_mp4(task_id, url):
-            return
-    except Exception as _exc_foto:
-        if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
-            tasks[task_id]["status"] = "error"
-            tasks[task_id]["error"] = str(_exc_foto) or "Error al convertir foto/animada a MP4"
-            return
-
-    try:
-        if _intentar_foto_mp4_seguro(task_id, url):
-            return
-    except Exception as _exc_foto:
-        if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
-            tasks[task_id]["status"] = "error"
-            tasks[task_id]["error"] = str(_exc_foto)
-            return
-
     try:
         outdir = os.path.join(DOWNLOAD_DIR, 'photos')
         os.makedirs(outdir, exist_ok=True)
@@ -387,58 +376,5 @@ def health():
 def google_verify():
     return "google-site-verification: google110a1e6092696f4d.html", 200, {'Content-Type': 'text/plain'}
 
-
-def _guardar_en_tarea(task_id, fpath, out_dir):
-    if not fpath or not os.path.exists(fpath) or os.path.getsize(fpath) == 0:
-        raise RuntimeError("No se genero el archivo de descarga.")
-    base_dir = globals().get("DOWNLOAD_DIR") or out_dir or os.getcwd()
-    abs_base = os.path.abspath(base_dir)
-    abs_file = os.path.abspath(fpath)
-    if not abs_file.startswith(abs_base + os.sep) and abs_file != abs_base:
-        os.makedirs(abs_base, exist_ok=True)
-        dest = os.path.join(abs_base, os.path.basename(abs_file))
-        with open(abs_file, "rb") as rf, open(dest, "wb") as wf:
-            wf.write(rf.read())
-        abs_file = dest
-    rel_name = os.path.relpath(abs_file, abs_base).replace("\\", "/")
-    if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
-        tasks[task_id]["status"] = "done"
-        tasks[task_id]["file"] = rel_name
-        tasks[task_id]["filename"] = rel_name
-        tasks[task_id]["error"] = None
-    return rel_name
-
-def _procesar_foto_o_animada_mp4(task_id, url):
-    if "is_tiktok_photo" not in globals() or "convertir_foto_o_animada_a_mp4" not in globals():
-        return False
-    if not is_tiktok_photo(url):
-        return False
-    out_dir = globals().get("DOWNLOAD_DIR") or os.path.join(os.getcwd(), "downloads")
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"{task_id}_foto_animada.mp4")
-    convertir_foto_o_animada_a_mp4(url, out_path)
-    _guardar_en_tarea(task_id, out_path, out_dir)
-    return True
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-def _intentar_foto_mp4_seguro(task_id, url):
-    if "is_tiktok_photo" not in globals() or "convertir_foto_o_animada_a_mp4" not in globals():
-        return False
-    if not is_tiktok_photo(url):
-        return False
-    out_dir = globals().get("DOWNLOAD_DIR") or globals().get("UPLOAD_FOLDER") or globals().get("OUTPUT_DIR") or os.getcwd()
-    os.makedirs(out_dir, exist_ok=True)
-    out_name = f"{task_id}_foto_animada.mp4"
-    out_path = os.path.join(out_dir, out_name)
-    convertir_foto_o_animada_a_mp4(url, out_path)
-    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-        raise RuntimeError("No se genero el MP4 de la foto o foto animada.")
-    if "tasks" in globals() and isinstance(tasks, dict) and task_id in tasks and isinstance(tasks[task_id], dict):
-        tasks[task_id]["status"] = "done"
-        tasks[task_id]["progress"] = 100
-        tasks[task_id]["file"] = out_name
-        tasks[task_id]["filename"] = out_name
-        tasks[task_id]["filepath"] = out_path
-    return True

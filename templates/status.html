@@ -55,5 +55,41 @@ setTimeout(check,2000);
 setTimeout(check,2000);
 </script>
 </div>
-<script>var isDark=localStorage.getItem("bpss_dark")==="1";function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?"\u2600\uFE0F":"\u263E\uFE0F";}applyTheme();document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};</script></body>
+<script>var isDark=localStorage.getItem("bpss_dark")==="1";function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?"\u2600\uFE0F":"\u263E\uFE0F";}applyTheme();document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};</script>
+<script>
+(function () {
+  const observer = new MutationObserver(() => {
+    const btn = document.querySelector('a[href*="/download/"], button[data-download], .download-btn, #download-btn');
+    if (!btn) return;
+    if (document.getElementById("portada-descarga-auto")) return;
+    const thumb = window.__ULTIMA_PORTADA_DESCARGA__ || "";
+    if (!thumb) return;
+    const img = document.createElement("img");
+    img.id = "portada-descarga-auto";
+    img.src = thumb;
+    img.alt = "Portada del video";
+    img.style.cssText = "display:block;max-width:260px;width:100%;border-radius:12px;margin:10px auto;object-fit:cover;";
+    btn.parentNode.insertBefore(img, btn);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  const origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = async function (...args) {
+      const res = await origFetch.apply(this, args);
+      try {
+        const u = String(args[0] || "");
+        if (u.includes("/api/status/")) {
+          const clone = res.clone();
+          const data = await clone.json();
+          if (data && (data.thumbnail || data.cover)) {
+            window.__ULTIMA_PORTADA_DESCARGA__ = data.thumbnail || data.cover;
+          }
+        }
+      } catch (e) {}
+      return res;
+    };
+  }
+})();
+</script>
+</body>
 </html>
