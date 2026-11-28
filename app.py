@@ -15,7 +15,7 @@ MAX_TOKENS = 1000
 HISTORY_LIMIT = 10
 CLEANUP_AGE = 7200
 MAX_FILES = 50
-RATE_LIMIT = 5
+RATE_LIMIT = 10
 
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 VALID_DOMAINS = ['tiktok.com', 'instagram.com', 'facebook.com', 'fb.watch', 'youtube.com', 'youtu.be', 'x.com', 'twitter.com']
@@ -114,7 +114,6 @@ def do_download(task_id, url, dtype):
     platform = detect_platform(url)
     try:
         url = resolve_short_url(url)
-        # url = url.replace('/photo/', '/video/')
 
         # TIKTOK PHOTO  gallery-dl
         if is_tiktok_photo(url):
@@ -160,7 +159,7 @@ def do_download(task_id, url, dtype):
                 fpath = os.path.join(DOWNLOAD_DIR, fname)
                 fsize = get_file_size(fpath) if os.path.exists(fpath) else ''
                 title = info.get('title', '')[:80] if info else ''
-                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform, 'thumbnail': info.get('thumbnail','') if info else ''}
+                tasks[task_id] = {'status': 'done', 'file': fname, 'error': None, 'title': title, 'size': fsize, 'platform': platform}
     except Exception as e:
         err_msg = str(e)[:500]
         if '10231' in err_msg or '10204' in err_msg:
@@ -194,7 +193,7 @@ def do_gallery_dl(task_id, url, dtype, platform):
         # Comando CORRECTO para gallery-dl:
         # -D = directorio EXACTO (no crea subcarpetas)
         # Sin -o flags (los defaults ya descargan photos=true, videos=true)
-        cmd = ['gallery-dl', '-D', outdir, url]
+        cmd = ['gallery-dl', '-D', outdir, '-o', 'filename=%(id)s.%(ext)s', url]
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
@@ -347,14 +346,6 @@ def health():
 @app.route('/google110a1e6092696f4d.html')
 def google_verify():
     return "google-site-verification: google110a1e6092696f4d.html", 200, {'Content-Type': 'text/plain'}
-
-@app.route('/sobre')
-def sobre():
-    return render_template('about.html')
-
-@app.errorhandler(404)
-def not_found(e):
-    return render_template('404.html'), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
