@@ -416,3 +416,29 @@ def elegir_servidor_automatico(media_type="video", es_pesada=True):
         return "local", LOCAL_NODE_URL
     return "render", RENDER_NODE_URL
 # --- FIN ENRUTAMIENTO AUTOMATICO ---
+# === SELECCION AUTOMATICA DE SERVIDOR (SIN EXPONER EN LA UI) ===
+import os as _os
+import urllib.request as _urllib_request
+
+_LOCAL_URL = _os.environ.get("LOCAL_NODE_URL", "http://127.0.0.1:5000").rstrip("/")
+_RENDER_URL = _os.environ.get("RENDER_NODE_URL", "https://bpss-tiktoks.onrender.com").rstrip("/")
+_IS_RENDER = bool(_os.environ.get("RENDER"))
+
+def _local_esta_activo(timeout=1.0):
+    if _IS_RENDER:
+        return False
+    try:
+        with _urllib_request.urlopen(f"{_LOCAL_URL}/healthz", timeout=timeout) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+def seleccionar_nodo_automatico(modo="video", es_pesada=True):
+    """Elige automaticamente entre PC local y Render segun el peso de la tarea y disponibilidad."""
+    local_ok = _local_esta_activo()
+    if es_pesada or modo == "audio":
+        return ("local", _LOCAL_URL) if local_ok else ("render", _RENDER_URL)
+    if (not _IS_RENDER) and local_ok:
+        return ("local", _LOCAL_URL)
+    return ("render", _RENDER_URL)
+# === FIN SELECCION AUTOMATICA DE SERVIDOR ===
