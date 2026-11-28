@@ -55,3 +55,35 @@ input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(24
 .link-back{display:inline-block;margin-top:1rem;font-size:.8rem;color:var(--muted);text-decoration:none}
 .link-back:hover{color:var(--accent)}
 @media(max-width:480px){.container{max-width:100%;padding:1.5rem 1.2rem}h1{font-size:1.4rem}}
+
+/* Estetica viva negro y morado Bpss TikToks */
+body {
+  background: radial-gradient(circle at top, #24103a 0%, #0b0910 60%, #060508 100%) !important;
+  color: #f5f3ff !important;
+}
+.container, .card, main, .box {
+  border-color: rgba(168, 85, 247, 0.28) !important;
+  box-shadow: 0 14px 40px rgba(88, 28, 135, 0.25) !important;
+}
+button, .btn, input[type="submit"] {
+  background: linear-gradient(135deg, #7e22ce, #a855f7) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(216, 180, 254, 0.35) !important;
+  box-shadow: 0 4px 18px rgba(147, 51, 234, 0.35) !important;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
+}
+button:hover, .btn:hover, input[type="submit"]:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 24px rgba(168, 85, 247, 0.55) !important;
+  filter: brightness(1.08) !important;
+}
+input[type="text"], input[type="url"], textarea {
+  border-color: rgba(168, 85, 247, 0.35) !important;
+  background-color: rgba(17, 12, 26, 0.85) !important;
+  color: #ffffff !important;
+}
+input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
+  outline: none !important;
+  border-color: #c084fc !important;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.22) !important;
+}

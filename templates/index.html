@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -24,7 +24,7 @@
 <body>
 <button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
 <div class="container">
-<a href="/" style="text-decoration:none;color:inherit;"><h1>Bpss TikToks</h1></a>
+<a href="/" style="text-decoration:none;color:inherit;"><img src="/static/logo.png" alt="bpss..tiktok" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin:0 auto 8px;display:block;border:1px solid rgba(168,85,247,0.45);"><h1>Bpss TikToks</h1></a>
 <p class="sub">TikTok &middot; Instagram &middot; Facebook &middot; X</p>
 <p class="desc">Descarga videos en maxima resolucion (4K) sin marca de agua. Gratis, sin registro.</p>
 <div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega la URL del video</p><p>2. Elige Video o Audio</p><p>3. Descarga en maxima calidad</p></div>
@@ -39,7 +39,7 @@
 </form>
 <div id="history"></div>
 <div class="chat-box">
-<div class="chat-header"><span class="chat-title">Chat</span><button class="clear-chat" onclick="clearChat()">&times;</button></div>
+<div class="chat-header"><span class="chat-title"><span style="display:inline-flex;align-items:center;gap:8px;"><img src="/static/bot.png" alt="Bot" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid rgba(192,132,252,0.6);">Bot</span></span><button class="clear-chat" onclick="clearChat()">&times;</button></div>
 <div id="chatMsgs"></div>
 <div class="suggestions" id="sugArea"></div>
 <div class="chat-input"><input type="text" id="chatInput" placeholder="Escribe aqui..."><button onclick="sendChat()">Enviar</button></div>
