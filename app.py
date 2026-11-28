@@ -1,10 +1,11 @@
 ﻿import glob
+import json
 import os
-import re
+import shutil
+import subprocess
 import threading
-import time
 import uuid
-from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
 
 try:
     import yt_dlp
@@ -21,22 +22,57 @@ os.makedirs(TEMPLATE_DIR, exist_ok=True)
 
 tasks = {}
 tasks_lock = threading.Lock()
+HAS_FFMPEG = shutil.which("ffmpeg") is not None
+
+
+def _estado_path(task_id):
+    return os.path.join(DOWNLOAD_DIR, f"{task_id}.state.json")
+
+
+def _guardar_estado_disco(task_id, data):
+    try:
+        with open(_estado_path(task_id), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def _cargar_estado_disco(task_id):
+    p = _estado_path(task_id)
+    if os.path.isfile(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                if isinstance(d, dict):
+                    return d
+        except Exception:
+            pass
+    return None
 
 
 def _set_task(task_id, **fields):
     with tasks_lock:
         curr = tasks.get(task_id)
         if not isinstance(curr, dict):
-            curr = {}
+            curr = _cargar_estado_disco(task_id) or {}
         curr.update(fields)
         tasks[task_id] = curr
-        return dict(curr)
+        snap = dict(curr)
+    _guardar_estado_disco(task_id, snap)
+    return snap
 
 
 def _get_task(task_id):
     with tasks_lock:
         curr = tasks.get(task_id)
-        return dict(curr) if isinstance(curr, dict) else None
+        if isinstance(curr, dict):
+            return dict(curr)
+    disk = _cargar_estado_disco(task_id)
+    if isinstance(disk, dict):
+        with tasks_lock:
+            tasks[task_id] = dict(disk)
+        return dict(disk)
+    return None
 
 
 def _extraer_portada(info):
@@ -61,7 +97,7 @@ def _buscar_archivo_final(task_id, modo="video"):
     for fname in os.listdir(DOWNLOAD_DIR):
         if not fname.startswith(task_id):
             continue
-        if fname.endswith((".part", ".ytdl", ".temp", ".tmp")):
+        if fname.endswith((".part", ".ytdl", ".temp", ".tmp", ".json")):
             continue
         fpath = os.path.join(DOWNLOAD_DIR, fname)
         if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
@@ -75,12 +111,21 @@ def _buscar_archivo_final(task_id, modo="video"):
                 return fn
     else:
         for _, fn in candidatos:
-            if fn.lower().endswith((".mp4", ".webm", ".mkv", ".mov")):
+            if fn.lower().endswith((".mp4", ".webm", ".mkv", ".mov", ".jpg", ".jpeg", ".png", ".webp")):
                 return fn
     return candidatos[0][1]
 
 
-def _construir_perfiles_ytdlp(outtmpl, modo):
+def _normalizar_url(raw_url):
+    u = (raw_url or "").strip()
+    if not u:
+        return ""
+    if not u.startswith(("http://", "https://")):
+        u = "https://" + u
+    return u
+
+
+def _construir_perfiles(outtmpl, modo):
     base = {
         "outtmpl": outtmpl,
         "noplaylist": True,
@@ -98,25 +143,30 @@ def _construir_perfiles_ytdlp(outtmpl, modo):
     }
 
     if modo in ("audio", "mp3"):
-        p1 = dict(base)
-        p1["format"] = "bestaudio/best"
-        p1["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "192",
-        }]
+        perfiles = []
+        if HAS_FFMPEG:
+            p_mp3 = dict(base)
+            p_mp3["format"] = "bestaudio/best"
+            p_mp3["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }]
+            perfiles.append(p_mp3)
 
-        p2 = dict(base)
-        p2["format"] = "ba/b"
+        p_ba = dict(base)
+        p_ba["format"] = "ba/b"
+        perfiles.append(p_ba)
 
-        p3 = dict(base)
-        p3["format"] = "best"
-        return [p1, p2, p3]
+        p_any = dict(base)
+        p_any["format"] = "best"
+        perfiles.append(p_any)
+        return perfiles
 
-    # Modo video: intentar alta calidad con merge, luego mp4 directo, luego mejor formato disponible
     p1 = dict(base)
     p1["format"] = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
-    p1["merge_output_format"] = "mp4"
+    if HAS_FFMPEG:
+        p1["merge_output_format"] = "mp4"
 
     p2 = dict(base)
     p2["format"] = "best[ext=mp4]/best"
@@ -124,80 +174,90 @@ def _construir_perfiles_ytdlp(outtmpl, modo):
     p3 = dict(base)
     p3["format"] = "best"
 
-    return [p1, p2, p3]
+    p4 = dict(base)
+    p4["format"] = "worst/best"
+
+    return [p1, p2, p3, p4]
 
 
-def _normalizar_url(raw_url):
-    u = (raw_url or "").strip()
-    if not u:
-        return ""
-    if not u.startswith(("http://", "https://")):
-        u = "https://" + u
-    return u
+def _intentar_cli_fallback(url_limpia, outtmpl, modo):
+    try:
+        cmd = ["yt-dlp", "--no-playlist", "--no-check-certificate", "-o", outtmpl]
+        if modo in ("audio", "mp3"):
+            if HAS_FFMPEG:
+                cmd += ["-x", "--audio-format", "mp3", "-f", "bestaudio/best"]
+            else:
+                cmd += ["-f", "ba/b"]
+        else:
+            cmd += ["-f", "best[ext=mp4]/best"]
+        cmd.append(url_limpia)
+        subprocess.run(cmd, timeout=90, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
 
 
 def do_download(task_id, url, mode="video"):
     portada = None
+    titulo = None
     modo_limpio = (mode or "video").strip().lower()
     url_limpia = _normalizar_url(url)
-
     _set_task(task_id, status="processing", progress=15, mode=modo_limpio, error=None)
 
     try:
-        if not yt_dlp:
-            raise RuntimeError("yt-dlp no esta disponible en el entorno.")
         if not url_limpia or "." not in url_limpia:
             raise ValueError("Enlace no valido.")
 
         outtmpl = os.path.join(DOWNLOAD_DIR, f"{task_id}_%(title).70s.%(ext)s")
-        perfiles = _construir_perfiles_ytdlp(outtmpl, modo_limpio)
-
-        ultimo_error = None
         archivo_final = None
+        ultimo_error = None
 
-        for idx, opts in enumerate(perfiles, start=1):
-            _set_task(task_id, status="processing", progress=min(85, 20 + idx * 20))
-            try:
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    info = ydl.extract_info(url_limpia, download=True)
-                    extra_thumb = _extraer_portada(info)
-                    if extra_thumb:
-                        portada = extra_thumb
-                        _set_task(task_id, thumbnail=portada, cover=portada)
-
-                    if isinstance(info, dict):
-                        req_dl = info.get("requested_downloads")
-                        if isinstance(req_dl, list) and req_dl:
-                            fp = req_dl[0].get("filepath")
-                            if fp and os.path.isfile(fp) and os.path.getsize(fp) > 0:
-                                archivo_final = os.path.basename(fp)
-                        if not archivo_final:
-                            fp = info.get("_filename") or info.get("filepath")
-                            if fp and os.path.isfile(fp) and os.path.getsize(fp) > 0:
-                                archivo_final = os.path.basename(fp)
-
-                if not archivo_final:
+        if yt_dlp is not None:
+            perfiles = _construir_perfiles(outtmpl, modo_limpio)
+            for idx, opts in enumerate(perfiles, start=1):
+                _set_task(task_id, status="processing", progress=min(80, 15 + idx * 15))
+                try:
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        info = ydl.extract_info(url_limpia, download=True)
+                        if isinstance(info, dict):
+                            if info.get("title"):
+                                titulo = str(info.get("title"))
+                            thumb = _extraer_portada(info)
+                            if thumb:
+                                portada = thumb
+                            _set_task(task_id, title=titulo, thumbnail=portada, cover=portada)
+                            req_dl = info.get("requested_downloads")
+                            if isinstance(req_dl, list) and req_dl:
+                                fp = req_dl[0].get("filepath")
+                                if fp and os.path.isfile(fp) and os.path.getsize(fp) > 0:
+                                    archivo_final = os.path.basename(fp)
+                            if not archivo_final:
+                                fp = info.get("_filename") or info.get("filepath")
+                                if fp and os.path.isfile(fp) and os.path.getsize(fp) > 0:
+                                    archivo_final = os.path.basename(fp)
+                    if not archivo_final:
+                        archivo_final = _buscar_archivo_final(task_id, modo_limpio)
+                    if archivo_final:
+                        break
+                except Exception as exc_p:
+                    ultimo_error = exc_p
                     archivo_final = _buscar_archivo_final(task_id, modo_limpio)
-
-                if archivo_final:
-                    break
-            except Exception as e_perfil:
-                ultimo_error = e_perfil
-                archivo_final = _buscar_archivo_final(task_id, modo_limpio)
-                if archivo_final:
-                    break
+                    if archivo_final:
+                        break
 
         if not archivo_final:
+            _set_task(task_id, status="processing", progress=88)
+            _intentar_cli_fallback(url_limpia, outtmpl, modo_limpio)
             archivo_final = _buscar_archivo_final(task_id, modo_limpio)
 
         if not archivo_final:
-            raise RuntimeError(str(ultimo_error) if ultimo_error else "No se pudo completar la descarga.")
+            raise RuntimeError(str(ultimo_error) if ultimo_error else "No se pudo descargar el archivo.")
 
         dl_url = f"/download/{archivo_final}"
         _set_task(
             task_id,
             status="done",
             progress=100,
+            title=titulo,
             file=archivo_final,
             filename=archivo_final,
             download_url=dl_url,
@@ -211,13 +271,14 @@ def do_download(task_id, url, mode="video"):
             task_id,
             status="error",
             progress=100,
-            error=str(exc) or "Error al descargar.",
+            title=titulo,
+            error=str(exc) or "Error en la descarga.",
             thumbnail=portada,
             cover=portada,
         )
 
 
-def _extraer_campos_peticion():
+def _extraer_campos():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         data = {}
@@ -242,7 +303,7 @@ def _extraer_campos_peticion():
     return url, mode
 
 
-def _crear_y_lanzar_tarea(url, mode):
+def _lanzar_tarea(url, mode):
     task_id = uuid.uuid4().hex[:12]
     _set_task(
         task_id,
@@ -251,6 +312,7 @@ def _crear_y_lanzar_tarea(url, mode):
         status="processing",
         progress=10,
         mode=mode,
+        title=None,
         file=None,
         filename=None,
         download_url=None,
@@ -258,8 +320,7 @@ def _crear_y_lanzar_tarea(url, mode):
         cover=None,
         error=None,
     )
-    hilo = threading.Thread(target=do_download, args=(task_id, url, mode), daemon=True)
-    hilo.start()
+    threading.Thread(target=do_download, args=(task_id, url, mode), daemon=True).start()
     return task_id
 
 
@@ -273,11 +334,12 @@ def _render_plantilla_segura(nombres, **ctx):
                 pass
     return (
         "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-        "<title>Bpss TikToks</title></head><body style='font-family:sans-serif;background:#111;color:#fff;padding:24px;'>"
+        "<title>Bpss TikToks</title></head><body style='font-family:sans-serif;background:#0e0b16;color:#fff;padding:24px;'>"
         "<h2>Bpss TikToks</h2>"
         "<form method='post' action='/'>"
-        "<input type='text' name='url' placeholder='Pega enlace de TikTok' style='width:100%;padding:10px;margin-bottom:10px;'>"
-        "<button type='submit' style='padding:10px 18px;'>Descargar</button>"
+        "<input type='text' name='url' placeholder='Pega el enlace aqui' style='width:100%;padding:10px;margin-bottom:10px;'>"
+        "<button type='submit' name='type' value='video' style='padding:10px 18px;'>Video</button>"
+        "<button type='submit' name='type' value='audio' style='padding:10px 18px;'>Audio</button>"
         "</form></body></html>"
     )
 
@@ -285,9 +347,9 @@ def _render_plantilla_segura(nombres, **ctx):
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        url, mode = _extraer_campos_peticion()
+        url, mode = _extraer_campos()
         if url:
-            task_id = _crear_y_lanzar_tarea(url, mode)
+            task_id = _lanzar_tarea(url, mode)
             if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return jsonify({
                     "task_id": task_id,
@@ -298,6 +360,39 @@ def index():
                 })
             return redirect(f"/status/{task_id}")
     return _render_plantilla_segura(["index.html", "status.html"])
+
+
+@app.route("/sobre", methods=["GET"])
+def sobre():
+    return _render_plantilla_segura(["about.html", "index.html"])
+
+
+@app.route("/sitemap.xml", methods=["GET"])
+def sitemap():
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        '<url><loc>https://bpss-tiktoks.onrender.com/</loc></url>'
+        '<url><loc>https://bpss-tiktoks.onrender.com/sobre</loc></url>'
+        '</urlset>'
+    )
+    return Response(xml, mimetype="application/xml")
+
+
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    payload = request.get_json(silent=True) or {}
+    msg = str(payload.get("message") or "").strip().lower()
+    if "audio" in msg or "mp3" in msg:
+        reply = "Pega el enlace del video y pulsa el boton Audio para extraer el sonido."
+    elif "privado" in msg or "error" in msg:
+        reply = "Solo funcionan enlaces publicos. Si falla uno, revisa que el enlace sea completo y publico."
+    else:
+        reply = "Pega la URL del video publico arriba y elige Video o Audio para comenzar."
+    return jsonify({
+        "reply": reply,
+        "suggestions": ["Como descargar video", "Extraer audio", "Enlaces publicos"]
+    })
 
 
 @app.route("/status/<task_id>", methods=["GET", "POST"])
@@ -320,10 +415,10 @@ def status_page(task_id):
 @app.route("/download", methods=["GET", "POST"])
 @app.route("/start", methods=["GET", "POST"])
 def start_download():
-    url, mode = _extraer_campos_peticion()
+    url, mode = _extraer_campos()
     if not url:
         return jsonify({"status": "error", "error": "Falta la URL"}), 400
-    task_id = _crear_y_lanzar_tarea(url, mode)
+    task_id = _lanzar_tarea(url, mode)
     return jsonify({
         "task_id": task_id,
         "id": task_id,
@@ -347,7 +442,7 @@ def api_status(task_id):
             "filename": None,
             "thumbnail": None,
             "cover": None,
-            "error": "Tarea no encontrada o el servidor se reinicio.",
+            "error": "Tarea no encontrada.",
         }), 200
     if "thumbnail" not in t and t.get("cover"):
         t["thumbnail"] = t["cover"]
@@ -363,7 +458,6 @@ def serve_file(filename):
     full_path = os.path.join(DOWNLOAD_DIR, safe_name)
     if os.path.isfile(full_path):
         return send_from_directory(DOWNLOAD_DIR, safe_name, as_attachment=True)
-    # Respaldo si el nombre viene sin prefijo exacto
     matches = glob.glob(os.path.join(DOWNLOAD_DIR, f"*{safe_name}*"))
     for m in matches:
         if os.path.isfile(m):
@@ -380,15 +474,15 @@ def healthz():
 def handle_404(e):
     if request.path.startswith("/api/"):
         return jsonify({"status": "error", "error": "Ruta no encontrada"}), 404
-    return _render_plantilla_segura(["index.html", "status.html"])
+    return _render_plantilla_segura(["404.html", "index.html"])
 
 
 @app.errorhandler(405)
 def handle_405(e):
     if request.method == "POST":
-        url, mode = _extraer_campos_peticion()
+        url, mode = _extraer_campos()
         if url:
-            task_id = _crear_y_lanzar_tarea(url, mode)
+            task_id = _lanzar_tarea(url, mode)
             return redirect(f"/status/{task_id}")
     return redirect("/")
 
@@ -399,7 +493,7 @@ def handle_500(e):
     if request.path.startswith("/api/") or request.is_json:
         return jsonify({"status": "error", "error": detalle}), 500
     try:
-        return _render_tpl(["index.html", "status.html"])
+        return _render_plantilla_segura(["index.html", "status.html"], error=detalle)
     except Exception:
         return jsonify({"status": "error", "error": detalle}), 500
 
