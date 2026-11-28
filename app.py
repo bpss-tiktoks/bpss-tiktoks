@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import uuid
 from flask import Flask, Response, jsonify, redirect, render_template, request, send_from_directory
@@ -23,6 +24,9 @@ os.makedirs(TEMPLATE_DIR, exist_ok=True)
 tasks = {}
 tasks_lock = threading.Lock()
 HAS_FFMPEG = shutil.which("ffmpeg") is not None
+IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+VIDEO_EXTS = (".mp4", ".webm", ".mkv", ".mov")
+AUDIO_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
 
 
 def _estado_path(task_id):
@@ -51,6 +55,7 @@ def _cargar_estado_disco(task_id):
 
 
 def _set_task(task_id, **fields):
+    fields.pop("task_id", None)
     with tasks_lock:
         curr = tasks.get(task_id)
         if not isinstance(curr, dict):
@@ -78,18 +83,48 @@ def _get_task(task_id):
 def _extraer_portada(info):
     if not isinstance(info, dict):
         return None
+    thumbs = info.get("thumbnails")
+    mejor_url = None
+    mejor_area = -1
+    if isinstance(thumbs, list):
+        for item in thumbs:
+            if not isinstance(item, dict):
+                continue
+            u = item.get("url")
+            if not (isinstance(u, str) and u.startswith(("http://", "https://"))):
+                continue
+            w = item.get("width") or 0
+            h = item.get("height") or 0
+            area = w * h if (isinstance(w, (int, float)) and isinstance(h, (int, float))) else 0
+            if area >= mejor_area:
+                mejor_area = area
+                mejor_url = u
+    if mejor_url:
+        return mejor_url
     for key in ("thumbnail", "cover", "origin_cover", "dynamic_cover"):
         val = info.get(key)
         if isinstance(val, str) and val.startswith(("http://", "https://")):
             return val
-    thumbs = info.get("thumbnails")
-    if isinstance(thumbs, list):
-        for item in reversed(thumbs):
-            if isinstance(item, dict):
-                u = item.get("url")
-                if isinstance(u, str) and u.startswith(("http://", "https://")):
-                    return u
     return None
+
+
+def _convertir_imagen_a_mp4(img_path, mp4_path, duracion=4):
+    if not HAS_FFMPEG or not os.path.isfile(img_path):
+        return False
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-loop", "1",
+        "-i", img_path,
+        "-t", str(duracion),
+        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart",
+        mp4_path,
+    ]
+    res = subprocess.run(cmd, timeout=60, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return res.returncode == 0 and os.path.isfile(mp4_path) and os.path.getsize(mp4_path) > 0
 
 
 def _buscar_archivo_final(task_id, modo="video"):
@@ -107,11 +142,11 @@ def _buscar_archivo_final(task_id, modo="video"):
     candidatos.sort(reverse=True)
     if modo in ("audio", "mp3"):
         for _, fn in candidatos:
-            if fn.lower().endswith((".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")):
+            if fn.lower().endswith(AUDIO_EXTS):
                 return fn
     else:
         for _, fn in candidatos:
-            if fn.lower().endswith((".mp4", ".webm", ".mkv", ".mov", ".jpg", ".jpeg", ".png", ".webp")):
+            if fn.lower().endswith(VIDEO_EXTS + IMAGE_EXTS):
                 return fn
     return candidatos[0][1]
 
@@ -134,7 +169,6 @@ def _construir_perfiles(outtmpl, modo):
         "socket_timeout": 25,
         "retries": 2,
         "fragment_retries": 2,
-        "nocheckcertificate": True,
         "user_agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -153,43 +187,38 @@ def _construir_perfiles(outtmpl, modo):
                 "preferredquality": "192",
             }]
             perfiles.append(p_mp3)
-
         p_ba = dict(base)
         p_ba["format"] = "ba/b"
         perfiles.append(p_ba)
-
         p_any = dict(base)
         p_any["format"] = "best"
         perfiles.append(p_any)
         return perfiles
 
-    p1 = dict(base)
-    p1["format"] = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
+    p_hd = dict(base)
+    p_hd["format"] = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best"
     if HAS_FFMPEG:
-        p1["merge_output_format"] = "mp4"
+        p_hd["merge_output_format"] = "mp4"
 
-    p2 = dict(base)
-    p2["format"] = "best[ext=mp4]/best"
+    p_mp4 = dict(base)
+    p_mp4["format"] = "best[ext=mp4]/best"
 
-    p3 = dict(base)
-    p3["format"] = "best"
+    p_any = dict(base)
+    p_any["format"] = "best"
 
-    p4 = dict(base)
-    p4["format"] = "worst/best"
-
-    return [p1, p2, p3, p4]
+    return [p_hd, p_mp4, p_any]
 
 
 def _intentar_cli_fallback(url_limpia, outtmpl, modo):
     try:
-        cmd = ["yt-dlp", "--no-playlist", "--no-check-certificate", "-o", outtmpl]
+        cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist", "-o", outtmpl]
         if modo in ("audio", "mp3"):
             if HAS_FFMPEG:
                 cmd += ["-x", "--audio-format", "mp3", "-f", "bestaudio/best"]
             else:
                 cmd += ["-f", "ba/b"]
         else:
-            cmd += ["-f", "best[ext=mp4]/best"]
+            cmd += ["-f", "bestvideo+bestaudio/best[ext=mp4]/best"]
         cmd.append(url_limpia)
         subprocess.run(cmd, timeout=90, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
@@ -252,6 +281,14 @@ def do_download(task_id, url, mode="video"):
         if not archivo_final:
             raise RuntimeError(str(ultimo_error) if ultimo_error else "No se pudo descargar el archivo.")
 
+        ruta_actual = os.path.join(DOWNLOAD_DIR, archivo_final)
+        if modo_limpio in ("video", "photo_mp4", "foto_mp4") and archivo_final.lower().endswith(IMAGE_EXTS):
+            base_sin_ext = os.path.splitext(archivo_final)[0]
+            mp4_nombre = f"{base_sin_ext}.mp4"
+            mp4_ruta = os.path.join(DOWNLOAD_DIR, mp4_nombre)
+            if _convertir_imagen_a_mp4(ruta_actual, mp4_ruta):
+                archivo_final = mp4_nombre
+
         dl_url = f"/download/{archivo_final}"
         _set_task(
             task_id,
@@ -308,7 +345,6 @@ def _lanzar_tarea(url, mode):
     _set_task(
         task_id,
         id=task_id,
-        task_id=task_id,
         status="processing",
         progress=10,
         mode=mode,
@@ -501,3 +537,6 @@ def handle_500(e):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
+
+
