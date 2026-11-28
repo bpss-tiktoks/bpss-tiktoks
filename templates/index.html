@@ -50,7 +50,7 @@
 </div>
 <script>
 var isDark=localStorage.getItem("bpss_dark")==="1";
-function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?String.fromCharCode(9728)+" FE0F":String.fromCharCode(9790)+" FE0F";}
+function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?String.fromCharCode(9728):String.fromCharCode(9790);}
 applyTheme();
 document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};
 var dlCount=parseInt(localStorage.getItem("bpss_dl_count")||"0");
