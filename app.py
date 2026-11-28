@@ -37,376 +37,92 @@ def build_ydl_opts(mode='video', quality='best'):
         'noplaylist': True,
     }
 
-HTML_PAGE = """<!DOCTYPE html>
+HTML_PAGE = """﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXUS // Media Node</title>
-  <style>
-    :root {
-      --bg: #07070c;
-      --panel: #0e0e18;
-      --panel-2: #141424;
-      --border: rgba(168, 85, 247, 0.22);
-      --border-strong: rgba(168, 85, 247, 0.55);
-      --text: #f3f0ff;
-      --muted: #8e88a8;
-      --accent: #a855f7;
-      --ok: #22c55e;
-      --err: #ef4444;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background:
-        radial-gradient(circle at 15% 10%, rgba(168, 85, 247, 0.14), transparent 45%),
-        radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.08), transparent 45%),
-        var(--bg);
-      color: var(--text);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 36px 18px;
-    }
-    .wrap {
-      width: 100%;
-      max-width: 760px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 18px 22px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-    }
-    .brand { display: flex; flex-direction: column; gap: 3px; }
-    .brand-tag {
-      font-size: 11px;
-      letter-spacing: 2.4px;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 600;
-    }
-    .brand h1 { font-size: 20px; font-weight: 600; }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 13px;
-      border-radius: 999px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--muted);
-      cursor: pointer;
-    }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-    .dot.online { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
-    .dot.offline { background: var(--err); }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .mode-btn {
-      padding: 12px 14px;
-      border-radius: 10px;
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      text-align: left;
-      cursor: pointer;
-    }
-    .mode-btn.active {
-      border-color: var(--border-strong);
-      background: rgba(168, 85, 247, 0.14);
-    }
-    .mode-title { font-size: 13px; font-weight: 600; display: block; }
-    .mode-sub { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
-    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
-    input, select {
-      width: 100%;
-      padding: 11px 13px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-    }
-    input:focus, select:focus { border-color: var(--border-strong); }
-    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    button.primary {
-      flex: 1;
-      min-width: 160px;
-      padding: 12px 18px;
-      border-radius: 10px;
-      border: 1px solid var(--border-strong);
-      background: linear-gradient(135deg, #7e22ce, #a855f7);
-      color: #fff;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    button.secondary {
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      color: var(--text);
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .console {
-      background: #050509;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      font-family: Consolas, monospace;
-      font-size: 12.5px;
-      line-height: 1.55;
-      color: #d8d0f7;
-      min-height: 120px;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    @media (max-width: 600px) { .modes, .row-2 { grid-template-columns: 1fr; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bpss TikToks - Descargar video en alta definición</title>
+<meta name="description" content="Descargar video en alta definición sin marca de agua de TikTok, Instagram, Facebook y X. Gratis y sin registro.">
+<meta property="og:title" content="Bpss TikToks">
+<meta property="og:description" content="Descargar video en alta definición sin marca de agua.">
+<meta property="og:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
+<meta property="og:url" content="https://bpss-tiktoks.onrender.com">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="Bpss TikToks">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bpss TikToks - Descargar video en alta definición">
+<meta name="twitter:description" content="Descargar video en alta definición sin marca de agua.">
+<meta name="twitter:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
+<link rel="icon" type="image/png" href="/static/logo.png">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<link rel="canonical" href="https://bpss-tiktoks.onrender.com/">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+.mode-group{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.mode-btn{padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:inherit;font-weight:600;cursor:pointer;transition:.15s;}
+.mode-btn.active{background:rgba(168,85,247,0.22);border-color:#a855f7;color:#fff;}
+.submit-main{width:100%;padding:12px 16px;border-radius:10px;border:none;background:#9333ea;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;}
+.submit-main:hover{background:#7e22ce;}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="brand">
-        <span class="brand-tag">Hybrid Node // v1.0</span>
-        <h1>Media Engine</h1>
-      </div>
-      <div class="pill" id="healthPill" onclick="checkHealth()">
-        <span class="dot" id="statusDot"></span>
-        <span id="statusText">Verificando...</span>
-      </div>
-    </header>
+<button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
+<div class="container">
+<a href="/" style="text-decoration:none;color:inherit;"><img src="/static/logo.png" alt="Bpss TikToks" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin:0 auto 8px;display:block;border:1px solid rgba(168,85,247,0.45);"><h1>Bpss TikToks</h1></a>
+<p class="sub">Descargar video en alta definición</p>
+<p class="desc">TikTok &middot; Instagram &middot; Facebook &middot; X sin marca de agua. Gratis y sin registro.</p>
+<div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega el enlace del contenido</p><p>2. Elige Video, Fotos o Audio</p><p>3. Pulsa Descargar</p></div>
+<p class="counter" id="counter"></p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form id="dlForm" method="POST" action="/">
+<input type="text" id="urlInput" name="url" placeholder="Pega aquí el enlace de video, foto o audio..." required>
+<input type="hidden" id="modeInput" name="type" value="video">
+<div class="mode-group" role="group" aria-label="Tipo de descarga">
+<button type="button" class="mode-btn active" data-mode="video" onclick="selectMode('video',this)">Video</button>
+<button type="button" class="mode-btn" data-mode="photo" onclick="selectMode('photo',this)">Fotos</button>
+<button type="button" class="mode-btn" data-mode="audio" onclick="selectMode('audio',this)">Audio</button>
+</div>
+<button type="submit" class="submit-main">Descargar</button>
+</form>
+<div id="history"></div>
+<div class="chat-box">
+<div class="chat-header"><span class="chat-title"><span style="display:inline-flex;align-items:center;gap:8px;"><img src="/static/bot.png" alt="Bot" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid rgba(192,132,252,0.6);">ChatBot</span></span></div>
+<div id="chatMsgs"></div>
+<div class="suggestions" id="sugArea"></div>
+<div class="chat-input"><input type="text" id="chatInput" placeholder="Escribe aquí..."><button onclick="sendChat()">Enviar</button></div>
+</div>
 
-    <section class="card">
-      <div class="modes">
-        <button type="button" class="mode-btn active" id="btnLight" onclick="setWorkload('light')">
-          <span class="mode-title">Render // Liviano</span>
-          <span class="mode-sub">https://bpss-tiktoks.onrender.com</span>
-        </button>
-        <button type="button" class="mode-btn" id="btnHeavy" onclick="setWorkload('heavy')">
-          <span class="mode-title">PC Local // Pesado</span>
-          <span class="mode-sub">http://127.0.0.1:5000</span>
-        </button>
-      </div>
-
-      <div>
-        <label for="baseUrl">Endpoint base activo</label>
-        <input type="text" id="baseUrl" value="__RENDER_URL__" />
-      </div>
-
-      <div>
-        <label for="mediaUrl">Enlace multimedia</label>
-        <input type="url" id="mediaUrl" placeholder="https://www.tiktok.com/@usuario/video/..." />
-      </div>
-
-      <div class="row-2">
-        <div>
-          <label for="mode">Modo</label>
-          <select id="mode">
-            <option value="video" selected>Video</option>
-            <option value="audio">Audio</option>
-          </select>
-        </div>
-        <div>
-          <label for="quality">Calidad</label>
-          <select id="quality">
-            <option value="best" selected>MÃ¡xima disponible</option>
-            <option value="1080p">1080p</option>
-            <option value="720p">720p</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button type="button" class="secondary" onclick="runAction('/info')">Analizar (/info)</button>
-        <button type="button" class="primary" onclick="runAction('/download')">Ejecutar (/download)</button>
-      </div>
-    </section>
-
-    <section class="card" style="padding: 14px 16px;">
-      <div class="console" id="out">Listo. Endpoint inicial: __RENDER_URL__</div>
-    </section>
-  </div>
-
-  <script>
-    const RENDER_URL = "__RENDER_URL__";
-    const LOCAL_URL = "http://127.0.0.1:5000";
-    let workload = 'light';
-
-    function getBase() {
-      return document.getElementById('baseUrl').value.trim().replace(/\/+$/, '');
-    }
-
-    function setWorkload(mode) {
-      workload = mode;
-      document.getElementById('btnLight').classList.toggle('active', mode === 'light');
-      document.getElementById('btnHeavy').classList.toggle('active', mode === 'heavy');
-      document.getElementById('baseUrl').value = mode === 'heavy' ? LOCAL_URL : RENDER_URL;
-      checkHealth();
-    }
-
-    async function checkHealth() {
-      const dot = document.getElementById('statusDot');
-      const txt = document.getElementById('statusText');
-      const target = `${getBase()}/healthz`;
-      try {
-        const r = await fetch(target);
-        const j = await r.json();
-        if (r.ok && j.ok) {
-          dot.className = 'dot online';
-          txt.textContent = workload === 'heavy' ? 'PC Online' : 'Render Online';
-          return;
-        }
-      } catch (_) {}
-      dot.className = 'dot offline';
-      txt.textContent = 'Sin conexiÃ³n';
-    }
-
-    async function runAction(endpoint) {
-      const url = document.getElementById('mediaUrl').value.trim();
-      const mode = document.getElementById('mode').value;
-      const quality = document.getElementById('quality').value;
-      const out = document.getElementById('out');
-
-      if (!url) {
-        out.textContent = 'Ingresa una URL vÃ¡lida primero.';
-        return;
-      }
-
-      const fullEndpoint = `${getBase()}${endpoint}`;
-      out.textContent = `Enviando a ${fullEndpoint}...`;
-
-      try {
-        const r = await fetch(fullEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, mode, quality })
-        });
-        const data = await r.json();
-        out.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        out.textContent = `Error de red: ${err.message}`;
-      }
-    }
-
-    checkHealth();
-  </script>
+<div style="margin-top:1rem;text-align:center"><span style="font-size:.65rem;color:var(--muted)">Compartir:</span> <a href="https://wa.me/?text=Descarga%20videos%20en%20alta%20definici%C3%B3n%3A%20https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">WhatsApp</a><a href="https://t.me/share/url?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">Telegram</a></div>
+<div style="margin-top:1rem;padding-top:.5rem;border-top:1px solid var(--border);text-align:center;font-size:.6rem;color:var(--muted)"><a href="/" style="color:var(--muted);text-decoration:none">Inicio</a> &middot; <a href="/sobre" style="color:var(--muted);text-decoration:none">Sobre</a> &middot; <a href="/sitemap.xml" style="color:var(--muted);text-decoration:none">Sitemap</a></div>
+</div>
+<script>
+function selectMode(mode,btn){
+  document.getElementById("modeInput").value=mode;
+  var buttons=document.querySelectorAll(".mode-btn");
+  for(var i=0;i<buttons.length;i++){buttons[i].classList.remove("active");}
+  if(btn){btn.classList.add("active");}
+}
+var isDark=localStorage.getItem("bpss_dark")==="1";
+function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?String.fromCharCode(9728):String.fromCharCode(9790);}
+applyTheme();
+document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};
+var dlCount=parseInt(localStorage.getItem("bpss_dl_count")||"0");
+document.getElementById("counter").textContent=dlCount>0?dlCount+" descargas":"";
+window.addEventListener("DOMContentLoaded",function(){var h=JSON.parse(localStorage.getItem("bpss_h")||"[]");if(h.length)document.getElementById("history").innerHTML="<div class=\"history\"><div class=\"history-header\"><p class=\"history-title\">Recientes</p><button class=\"clear-history\" onclick=\"clearHistory()\">Limpiar</button></div>"+h.slice(0,4).map(function(u){return "<p class=\"history-item\">"+u+"</p>"}).join("")+"</div>";});
+function clearHistory(){localStorage.removeItem("bpss_h");document.getElementById("history").innerHTML="";}
+document.getElementById("dlForm").addEventListener("submit",function(){var u=document.getElementById("urlInput").value;if(u){var h=JSON.parse(localStorage.getItem("bpss_h")||"[]");h.unshift(u);localStorage.setItem("bpss_h",JSON.stringify(h.slice(0,10)));}});
+var chatHistory=[];var lastError=null;
+function sendChat(){var inp=document.getElementById("chatInput");var m=inp.value.trim();if(!m)return;inp.value="";chatHistory.push({role:"user",content:m});addMsg(m,"user");fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m,history:chatHistory.slice(-10),last_error:lastError})}).then(function(r){return r.json()}).then(function(d){addMsg(d.reply,"bot");chatHistory.push({role:"assistant",content:d.reply});showSugs(d.suggestions)});}
+function addMsg(t,role){var el=document.getElementById("chatMsgs");var p=document.createElement("p");p.className="msg "+role;p.textContent=t;el.appendChild(p);el.scrollTop=el.scrollHeight;}
+function showSugs(s){var a=document.getElementById("sugArea");if(!s||!s.length){a.innerHTML="";return;}a.innerHTML="<div class=\"sug-list\">"+s.map(function(x){return "<button class=\"sug-btn\" onclick=\"useSug(this)\">"+x+"</button>"}).join("")+"</div>";}
+function useSug(b){document.getElementById("chatInput").value=b.textContent;sendChat();}
+function clearChat(){chatHistory=[];document.getElementById("chatMsgs").innerHTML="";document.getElementById("sugArea").innerHTML="";}
+document.getElementById("chatInput").addEventListener("keydown",function(e){if(e.key==="Enter")sendChat();});
+</script>
 </body>
-</html>
-""".replace("__RENDER_URL__", RENDER_URL)
-
-@app.route('/')
-def index():
-    return render_template_string(HTML_PAGE)
-
-@app.route('/healthz')
-def healthz():
-    return jsonify({'ok': True, 'status': 'Servidor operativo', 'render_url': RENDER_URL})
-
-@app.route('/info', methods=['POST', 'OPTIONS'])
-def get_info():
-    if request.method == 'OPTIONS':
-        return ('', 204)
-    data = request.get_json(silent=True) or {}
-    url = (data.get('url') or '').strip()
-    if not url:
-        return jsonify({'ok': False, 'error': 'Falta el campo url'}), 400
-    try:
-        with yt_dlp.YoutubeDL({'quiet': True, 'noplaylist': True}) as ydl:
-            info = ydl.extract_info(url, download=False)
-        entries = info.get('entries')
-        items = []
-        if entries:
-            for e in entries:
-                if e:
-                    items.append({
-                        'id': e.get('id'),
-                        'title': e.get('title'),
-                        'url': e.get('webpage_url') or e.get('url'),
-                        'ext': e.get('ext'),
-                    })
-        return jsonify({
-            'ok': True,
-            'title': info.get('title'),
-            'is_carousel_or_list': bool(items),
-            'items': items,
-            'formats_count': len(info.get('formats') or []),
-        })
-    except Exception as exc:
-        return jsonify({'ok': False, 'error': str(exc)}), 500
-
-@app.route('/download', methods=['POST', 'OPTIONS'])
-def download_media():
-    if request.method == 'OPTIONS':
-        return ('', 204)
-    data = request.get_json(silent=True) or {}
-    url = (data.get('url') or '').strip()
-    mode = (data.get('mode') or 'video').strip().lower()
-    quality = (data.get('quality') or 'best').strip().lower()
-    if not url:
-        return jsonify({'ok': False, 'error': 'Falta el campo url'}), 400
-
-    opts = build_ydl_opts(mode=mode, quality=quality)
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-        return jsonify({
-            'ok': True,
-            'title': info.get('title'),
-            'saved_to': filename,
-        })
-    except Exception as exc:
-        return jsonify({'ok': False, 'error': str(exc)}), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-# --- ENRUTAMIENTO AUTOMATICO ENTRE SERVIDORES (LOCAL PESADO / RENDER LIVIANO) ---
-import os
-import urllib.request
-import urllib.error
-
-LOCAL_NODE_URL = os.environ.get("LOCAL_NODE_URL", "http://127.0.0.1:5000").rstrip("/")
-RENDER_NODE_URL = os.environ.get("RENDER_NODE_URL", "https://bpss-tiktoks.onrender.com").rstrip("/")
-IS_RENDER = bool(os.environ.get("RENDER"))
-
-def _nodo_local_disponible(timeout=1.2):
-    if IS_RENDER:
-        return False
-    try:
-        with urllib.request.urlopen(f"{LOCAL_NODE_URL}/healthz", timeout=timeout) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
-
-def elegir_servidor_automatico(media_type="video", es_pesada=True):
-    """Elige automaticamente el nodo sin mostrarlo al usuario:
-    - Peticiones pesadas (audio o descarga con FFmpeg/yt-dlp): prioriza PC Local si esta activa, con respaldo en Render.
-    - Peticiones livianas: usa el nodo actual o Render si esta disponible.
-    """
+</html>"""
     local_ok = _nodo_local_disponible()
     if es_pesada or media_type == "audio":
         if local_ok:
