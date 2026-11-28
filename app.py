@@ -25,10 +25,9 @@ os.makedirs(TEMPLATE_DIR, exist_ok=True)
 tasks = {}
 tasks_lock = threading.Lock()
 HAS_FFMPEG = shutil.which("ffmpeg") is not None
-IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
 VIDEO_EXTS = (".mp4", ".webm", ".mkv", ".mov")
 AUDIO_EXTS = (".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav")
-MAX_FILE_AGE_SECONDS = 1800
+MAX_FILE_AGE_SECONDS = 1200
 
 
 def _estado_path(task_id):
@@ -58,18 +57,18 @@ def _cargar_estado_disco(task_id):
 
 def _set_task(task_id, **fields):
     fields.pop("task_id", None)
+    fields.pop("thumbnail", None)
+    fields.pop("cover", None)
     fields["updated_at"] = time.time()
     with tasks_lock:
         curr = tasks.get(task_id)
         if not isinstance(curr, dict):
             curr = _cargar_estado_disco(task_id) or {}
+        curr.pop("thumbnail", None)
+        curr.pop("cover", None)
         curr.update(fields)
         if "download_url" in curr and curr["download_url"] and not curr.get("url"):
             curr["url"] = curr["download_url"]
-        if "thumbnail" in curr and curr["thumbnail"] and not curr.get("cover"):
-            curr["cover"] = curr["thumbnail"]
-        if "cover" in curr and curr["cover"] and not curr.get("thumbnail"):
-            curr["thumbnail"] = curr["cover"]
         tasks[task_id] = curr
         snap = dict(curr)
     _guardar_estado_disco(task_id, snap)
@@ -79,10 +78,7 @@ def _set_task(task_id, **fields):
 def _get_task(task_id):
     with tasks_lock:
         curr = tasks.get(task_id)
-        if isinstance(curr, dict):
-            snap = dict(curr)
-        else:
-            snap = None
+        snap = dict(curr) if isinstance(curr, dict) else None
     if snap is None:
         disk = _cargar_estado_disco(task_id)
         if isinstance(disk, dict):
@@ -90,12 +86,14 @@ def _get_task(task_id):
                 tasks[task_id] = dict(disk)
             snap = dict(disk)
     if isinstance(snap, dict):
+        snap.pop("thumbnail", None)
+        snap.pop("cover", None)
         if snap.get("status") == "processing":
             updated = snap.get("updated_at") or 0
-            if time.time() - updated > 150:
+            if time.time() - updated > 120:
                 snap["status"] = "error"
                 snap["progress"] = 100
-                snap["error"] = "La descarga tardo demasiado en responder en el servidor."
+                snap["error"] = "Tiempo de espera agotado en el servidor."
                 _set_task(task_id, **snap)
     return snap
 
@@ -116,53 +114,6 @@ def _limpiar_archivos_antiguos():
         pass
 
 
-def _extraer_portada(info):
-    if not isinstance(info, dict):
-        return None
-    thumbs = info.get("thumbnails")
-    mejor_url = None
-    mejor_area = -1
-    if isinstance(thumbs, list):
-        for item in thumbs:
-            if not isinstance(item, dict):
-                continue
-            u = item.get("url")
-            if not (isinstance(u, str) and u.startswith(("http://", "https://"))):
-                continue
-            w = item.get("width") or 0
-            h = item.get("height") or 0
-            area = w * h if (isinstance(w, (int, float)) and isinstance(h, (int, float))) else 0
-            if area >= mejor_area:
-                mejor_area = area
-                mejor_url = u
-    if mejor_url:
-        return mejor_url
-    for key in ("thumbnail", "cover", "origin_cover", "dynamic_cover"):
-        val = info.get(key)
-        if isinstance(val, str) and val.startswith(("http://", "https://")):
-            return val
-    return None
-
-
-def _convertir_imagen_a_mp4(img_path, mp4_path, duracion=4):
-    if not HAS_FFMPEG or not os.path.isfile(img_path):
-        return False
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-loop", "1",
-        "-i", img_path,
-        "-t", str(duracion),
-        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
-        mp4_path,
-    ]
-    res = subprocess.run(cmd, timeout=60, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return res.returncode == 0 and os.path.isfile(mp4_path) and os.path.getsize(mp4_path) > 0
-
-
 def _buscar_archivo_final(task_id, modo="video"):
     candidatos = []
     try:
@@ -172,7 +123,7 @@ def _buscar_archivo_final(task_id, modo="video"):
     for fname in entries:
         if not fname.startswith(task_id):
             continue
-        if fname.endswith((".part", ".ytdl", ".temp", ".tmp", ".json")):
+        if fname.endswith((".part", ".ytdl", ".temp", ".tmp", ".json", ".jpg", ".jpeg", ".png", ".webp")):
             continue
         fpath = os.path.join(DOWNLOAD_DIR, fname)
         if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
@@ -186,7 +137,7 @@ def _buscar_archivo_final(task_id, modo="video"):
                 return fn
     else:
         for _, fn in candidatos:
-            if fn.lower().endswith(VIDEO_EXTS + IMAGE_EXTS):
+            if fn.lower().endswith(VIDEO_EXTS):
                 return fn
     return candidatos[0][1]
 
@@ -204,11 +155,12 @@ def _construir_perfiles(outtmpl, modo):
     base = {
         "outtmpl": outtmpl,
         "noplaylist": True,
+        "writethumbnail": False,
         "quiet": True,
         "no_warnings": True,
-        "socket_timeout": 20,
-        "retries": 2,
-        "fragment_retries": 2,
+        "socket_timeout": 18,
+        "retries": 1,
+        "fragment_retries": 1,
         "user_agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -224,15 +176,12 @@ def _construir_perfiles(outtmpl, modo):
             p_mp3["postprocessors"] = [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
-                "preferredquality": "192",
+                "preferredquality": "128",
             }]
             perfiles.append(p_mp3)
         p_ba = dict(base)
         p_ba["format"] = "ba/b"
         perfiles.append(p_ba)
-        p_any = dict(base)
-        p_any["format"] = "best"
-        perfiles.append(p_any)
         return perfiles
 
     p_hd = dict(base)
@@ -240,74 +189,58 @@ def _construir_perfiles(outtmpl, modo):
     if HAS_FFMPEG:
         p_hd["merge_output_format"] = "mp4"
 
-    p_mp4 = dict(base)
-    p_mp4["format"] = "best[ext=mp4]/best"
+    p_direct = dict(base)
+    p_direct["format"] = "best[ext=mp4]/best"
 
-    p_any = dict(base)
-    p_any["format"] = "best"
-
-    return [p_hd, p_mp4, p_any]
+    return [p_hd, p_direct]
 
 
 def _intentar_cli_fallback(url_limpia, outtmpl, modo):
     try:
-        cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist", "--socket-timeout", "20", "-o", outtmpl]
+        cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist", "--no-write-thumbnail", "--socket-timeout", "18", "-o", outtmpl]
         if modo in ("audio", "mp3"):
             if HAS_FFMPEG:
-                cmd += ["-x", "--audio-format", "mp3", "-f", "bestaudio/best"]
+                cmd += ["-x", "--audio-format", "mp3", "--audio-quality", "128", "-f", "bestaudio/best"]
             else:
                 cmd += ["-f", "ba/b"]
         else:
-            cmd += ["-f", "bestvideo+bestaudio/best[ext=mp4]/best"]
+            cmd += ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best"]
         cmd.append(url_limpia)
-        subprocess.run(cmd, timeout=75, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(cmd, timeout=60, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
 
 
 def do_download(task_id, url, mode="video"):
     _limpiar_archivos_antiguos()
-    portada = None
     titulo = None
     modo_limpio = (mode or "video").strip().lower()
+    if modo_limpio not in ("video", "audio", "mp3"):
+        modo_limpio = "video"
     url_limpia = _normalizar_url(url)
-    _set_task(task_id, status="processing", progress=15, mode=modo_limpio, error=None)
+    _set_task(task_id, status="processing", progress=20, mode=modo_limpio, error=None)
 
     try:
         if not url_limpia or "." not in url_limpia:
             raise ValueError("Enlace no valido.")
 
-        outtmpl = os.path.join(DOWNLOAD_DIR, f"{task_id}_%(title).70s.%(ext)s")
+        outtmpl = os.path.join(DOWNLOAD_DIR, f"{task_id}_%(title).60s.%(ext)s")
         archivo_final = None
         ultimo_error = None
 
         if yt_dlp is not None:
             perfiles = _construir_perfiles(outtmpl, modo_limpio)
             for idx, opts in enumerate(perfiles, start=1):
-                _set_task(task_id, status="processing", progress=min(75, 15 + idx * 20))
+                _set_task(task_id, status="processing", progress=min(75, 20 + idx * 25))
                 try:
                     with yt_dlp.YoutubeDL(opts) as ydl:
                         info = ydl.extract_info(url_limpia, download=True)
-                        if isinstance(info, dict):
-                            if info.get("title"):
-                                titulo = str(info.get("title"))
-                            thumb = _extraer_portada(info)
-                            if thumb:
-                                portada = thumb
-                            _set_task(task_id, title=titulo, thumbnail=portada, cover=portada)
-                            req_dl = info.get("requested_downloads")
-                            if isinstance(req_dl, list) and req_dl:
-                                fp = req_dl[0].get("filepath")
-                                if fp and os.path.isfile(fp) and os.path.getsize(fp) > 0:
-                                    archivo_final = os.path.basename(fp)
-                            if not archivo_final:
-                                fp = info.get("_filename") or info.get("filepath")
-                                if fp and os.path.isfile(fp) and os.path.getsize(fp) > 0:
-                                    archivo_final = os.path.basename(fp)
-                    if not archivo_final:
+                        if isinstance(info, dict) and info.get("title"):
+                            titulo = str(info.get("title"))
+                            _set_task(task_id, title=titulo)
                         archivo_final = _buscar_archivo_final(task_id, modo_limpio)
-                    if archivo_final:
-                        break
+                        if archivo_final:
+                            break
                 except Exception as exc_p:
                     ultimo_error = exc_p
                     archivo_final = _buscar_archivo_final(task_id, modo_limpio)
@@ -315,21 +248,12 @@ def do_download(task_id, url, mode="video"):
                         break
 
         if not archivo_final:
-            _set_task(task_id, status="processing", progress=85)
+            _set_task(task_id, status="processing", progress=88)
             _intentar_cli_fallback(url_limpia, outtmpl, modo_limpio)
             archivo_final = _buscar_archivo_final(task_id, modo_limpio)
 
         if not archivo_final:
-            raise RuntimeError(str(ultimo_error) if ultimo_error else "No se pudo descargar el archivo.")
-
-        ruta_actual = os.path.join(DOWNLOAD_DIR, archivo_final)
-        if modo_limpio in ("video", "photo_mp4", "foto_mp4") and archivo_final.lower().endswith(IMAGE_EXTS):
-            _set_task(task_id, status="processing", progress=92)
-            base_sin_ext = os.path.splitext(archivo_final)[0]
-            mp4_nombre = f"{base_sin_ext}.mp4"
-            mp4_ruta = os.path.join(DOWNLOAD_DIR, mp4_nombre)
-            if _convertir_imagen_a_mp4(ruta_actual, mp4_ruta):
-                archivo_final = mp4_nombre
+            raise RuntimeError(str(ultimo_error) if ultimo_error else "No se pudo descargar el video.")
 
         dl_url = f"/files/{archivo_final}"
         _set_task(
@@ -341,8 +265,6 @@ def do_download(task_id, url, mode="video"):
             filename=archivo_final,
             download_url=dl_url,
             url=dl_url,
-            thumbnail=portada,
-            cover=portada,
             error=None,
         )
     except Exception as exc:
@@ -352,8 +274,6 @@ def do_download(task_id, url, mode="video"):
             progress=100,
             title=titulo,
             error=str(exc) or "Error en la descarga.",
-            thumbnail=portada,
-            cover=portada,
         )
 
 
@@ -394,8 +314,6 @@ def _lanzar_tarea(url, mode):
         file=None,
         filename=None,
         download_url=None,
-        thumbnail=None,
-        cover=None,
         error=None,
     )
     threading.Thread(target=do_download, args=(task_id, url, mode), daemon=True).start()
@@ -416,7 +334,7 @@ def _render_plantilla_segura(nombres, **ctx):
         "<h2>Bpss TikToks</h2>"
         "<form method='post' action='/'>"
         "<input type='text' name='url' placeholder='Pega el enlace aqui' style='width:100%;padding:10px;margin-bottom:10px;'>"
-        "<button type='submit' name='type' value='video' style='padding:10px 18px;'>Video</button>"
+        "<button type='submit' name='type' value='video' style='padding:10px 18px;'>Video HD</button>"
         "<button type='submit' name='type' value='audio' style='padding:10px 18px;'>Audio</button>"
         "</form></body></html>"
     )
@@ -462,14 +380,14 @@ def api_chat():
     payload = request.get_json(silent=True) or {}
     msg = str(payload.get("message") or "").strip().lower()
     if "audio" in msg or "mp3" in msg:
-        reply = "Pega el enlace del video y pulsa el boton Audio para extraer el sonido."
+        reply = "Pega el enlace y pulsa Audio para extraer el sonido."
     elif "privado" in msg or "error" in msg:
-        reply = "Solo funcionan enlaces publicos. Si falla uno, revisa que el enlace sea completo y publico."
+        reply = "Solo funcionan enlaces publicos. Verifica que el enlace sea completo y publico."
     else:
-        reply = "Pega la URL del video publico arriba y elige Video o Audio para comenzar."
+        reply = "Pega la URL del video publico arriba y elige Video HD o Audio."
     return jsonify({
         "reply": reply,
-        "suggestions": ["Como descargar video", "Extraer audio", "Enlaces publicos"]
+        "suggestions": ["Descargar video HD", "Extraer audio", "Enlaces publicos"]
     })
 
 
@@ -482,8 +400,6 @@ def status_page(task_id):
         "progress": 10,
         "file": None,
         "filename": None,
-        "thumbnail": None,
-        "cover": None,
         "error": None,
     }
     return _render_plantilla_segura(["status.html", "index.html"], task_id=task_id, task=t)
@@ -517,8 +433,6 @@ def api_status(task_id):
             "progress": 100,
             "file": None,
             "filename": None,
-            "thumbnail": None,
-            "cover": None,
             "error": "Tarea no encontrada.",
         }), 200
     return jsonify(t), 200
