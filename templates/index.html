@@ -26,12 +26,12 @@
 <div class="container">
 <a href="/" style="text-decoration:none;color:inherit;"><img src="/static/logo.png" alt="bpss..tiktok" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin:0 auto 8px;display:block;border:1px solid rgba(168,85,247,0.45);"><h1>Bpss TikToks</h1></a>
 <p class="sub">TikTok &middot; Instagram &middot; Facebook &middot; X</p>
-<p class="desc">Descarga videos en maxima resolucion (4K) sin marca de agua. Gratis, sin registro.</p>
+<p class="desc">Descarga videos, fotos y fotos animadas en MP4 HD sin marca de agua. Gratis, sin registro.</p>
 <div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega la URL del video</p><p>2. Elige Video o Audio</p><p>3. Descarga en maxima calidad</p></div>
 <p class="counter" id="counter"></p>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 <form id="dlForm" method="POST" action="/">
-<input type="text" id="urlInput" name="url" placeholder="Pega la URL aqui..." required>
+<input type="text" id="urlInput" name="url" placeholder="Pega la URL de video, foto o animada aqui..." required>
 <div class="btns">
 <button type="submit" name="type" value="video">Video</button>
 <button type="submit" name="type" value="audio">Audio</button>
