@@ -3,75 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bpss TikToks - Descarga sin marca de agua</title>
-<meta name="description" content="Descarga videos y audios de TikTok, Instagram, Facebook y X. Gratis.">
+<title>Descargar Videos TikTok, Instagram, Facebook, X sin Marca de Agua - Bpss TikToks</title>
+<meta name="description" content="Descarga videos en alta resolucion (4K) de TikTok, Instagram, Facebook y X sin marca de agua. Gratis, rapido y sin registro.">
 <meta property="og:title" content="Bpss TikToks">
-<meta property="og:description" content="Descarga de TikTok, Instagram, Facebook, X.">
+<meta property="og:description" content="Descarga videos en alta resolucion sin marca de agua. Gratis.">
 <meta property="og:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
 <meta property="og:url" content="https://bpss-tiktoks.onrender.com">
-<meta property="og:type" content="website"><meta property="og:locale" content="es_ES"><meta property="og:site_name" content="Bpss TikToks">
-<link rel="icon" type="image/png" href="/static/logo.png"><link rel="apple-touch-icon" href="/static/logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/style.css">
-<meta name="keywords" content="descargar tiktok, descargar instagram, descargar facebook, descargar x, sin marca de agua, alta resolucion, 4K, video downloader"><link rel="canonical" href="https://bpss-tiktoks.onrender.com/"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Bpss TikToks - Descarga sin Marca de Agua"><meta name="twitter:description" content="Descarga videos en alta resolucion sin marca de agua. Gratis."><meta name="twitter:image" content="https://bpss-tiktoks.onrender.com/static/logo.png"><meta name="keywords" content="descargar tiktok, descargar instagram, descargar facebook, descargar x, sin marca de agua, alta resolucion, 4K, video downloader"><link rel="canonical" href="https://bpss-tiktoks.onrender.com/"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Bpss TikToks - Descarga sin Marca de Agua"><meta name="twitter:description" content="Descarga videos en alta resolucion sin marca de agua. Gratis."><meta name="twitter:image" content="https://bpss-tiktoks.onrender.com/static/logo.png"></head>
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_ES">
+<meta property="og:site_name" content="Bpss TikToks">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bpss TikToks - Descarga sin Marca de Agua">
+<meta name="twitter:description" content="Descarga videos en alta resolucion sin marca de agua. Gratis.">
+<meta name="twitter:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
+<link rel="icon" type="image/png" href="/static/logo.png">
+<link rel="apple-touch-icon" href="/static/logo.png">
+<link rel="canonical" href="https://bpss-tiktoks.onrender.com/">
+<link rel="stylesheet" href="/static/style.css">
+</head>
 <body>
 <button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
 <div class="container">
 <a href="/" style="text-decoration:none;color:inherit;"><h1>Bpss TikToks</h1></a>
 <p class="sub">TikTok &middot; Instagram &middot; Facebook &middot; X</p>
-<div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega la URL del video</p><p>2. Elige Video o Audio</p><p>3. Descarga en maxima calidad</p></div><p class="counter" id="counter"></p>
-<form method="POST" id="dlForm">
-<input type="text" name="url" id="urlInput" placeholder="Pega una URL de cualquier plataforma..." required autocomplete="off">
+<p class="desc">Descarga videos en maxima resolucion (4K) sin marca de agua. Gratis, sin registro.</p>
+<div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega la URL del video</p><p>2. Elige Video o Audio</p><p>3. Descarga en maxima calidad</p></div>
+<p class="counter" id="counter"></p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form id="dlForm" method="POST" action="/">
+<input type="text" id="urlInput" name="url" placeholder="Pega la URL aqui..." required>
 <div class="btns">
 <button type="submit" name="type" value="video">Video</button>
 <button type="submit" name="type" value="audio">Audio</button>
 </div>
 </form>
-{% if error %}<div class="error">{{ error }}</div>{% endif %}
 <div id="history"></div>
 <div class="chat-box">
-<div class="chat-header">
-<p class="chat-title">Chat IA</p>
-<button class="clear-chat" id="clearChat" title="Limpiar">&times;</button>
-</div>
+<div class="chat-header"><span class="chat-title">Chat</span><button class="clear-chat" onclick="clearChat()">&times;</button></div>
 <div id="chatMsgs"></div>
-<div class="suggestions" id="suggestions"></div>
-<div class="chat-input">
-<input type="text" id="chatInput" placeholder="Pregunta lo que sea..." autocomplete="off">
-<button type="button" id="chatSend">Enviar</button>
+<div class="suggestions" id="sugArea"></div>
+<div class="chat-input"><input type="text" id="chatInput" placeholder="Escribe aqui..."><button onclick="sendChat()">Enviar</button></div>
 </div>
-</div>
+<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);text-align:left"><p style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem">FAQ</p><p style="font-size:.7rem;color:var(--muted);margin-bottom:.3rem"><strong>Es gratis?</strong> Si, 100% gratis y sin registro.</p><p style="font-size:.7rem;color:var(--muted);margin-bottom:.3rem"><strong>Que calidad?</strong> Video hasta 4K, audio MP3 192kbps.</p><p style="font-size:.7rem;color:var(--muted)"><strong>Funciona con videos privados?</strong> No, solo videos publicos.</p></div>
+<div style="margin-top:1rem;text-align:center"><span style="font-size:.65rem;color:var(--muted)">Compartir:</span> <a href="https://wa.me/?text=Descarga%20videos%20sin%20marca%20de%20agua%3A%20https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">WhatsApp</a><a href="https://t.me/share/url?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">Telegram</a><a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">X</a></div>
+<div style="margin-top:1rem;padding-top:.5rem;border-top:1px solid var(--border);text-align:center;font-size:.6rem;color:var(--muted)"><a href="/" style="color:var(--muted);text-decoration:none">Inicio</a> &middot; <a href="/sobre" style="color:var(--muted);text-decoration:none">Sobre</a> &middot; <a href="/sitemap.xml" style="color:var(--muted);text-decoration:none">Sitemap</a></div>
 </div>
 <script>
-var isDark=localStorage.getItem('bpss_dark')==='1';
-function applyTheme(){document.body.classList.toggle('dark',isDark);document.getElementById('themeToggle').textContent=isDark?'\u2600\uFE0F':'\u263E\uFE0F';}
+var isDark=localStorage.getItem("bpss_dark")==="1";
+function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?String.fromCharCode(9728)+" FE0F":String.fromCharCode(9790)+" FE0F";}
 applyTheme();
-document.getElementById('themeToggle').onclick=function(){isDark=!isDark;localStorage.setItem('bpss_dark',isDark?'1':'0');applyTheme();};
-var dlCount=parseInt(localStorage.getItem('bpss_dl_count')||'0');
-document.getElementById('counter').textContent=dlCount>0?dlCount+' descargas':'';
-window.addEventListener('DOMContentLoaded',function(){
-var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');
-if(h.length)document.getElementById('history').innerHTML='<div class="history"><div class="history-header"><p class="history-title">Recientes</p><button class="clear-history" onclick="clearHistory()">Limpiar</button></div>'+h.slice(0,4).map(function(u){return '<p class="history-item">'+u+'</p>'}).join('')+'</div>';
-});
-function clearHistory(){localStorage.removeItem('bpss_h');document.getElementById('history').innerHTML='';}
-document.getElementById('dlForm').addEventListener('submit',function(){
-var u=document.getElementById('urlInput').value;
-if(u){var h=JSON.parse(localStorage.getItem('bpss_h')||'[]');h.unshift(u);localStorage.setItem('bpss_h',JSON.stringify(h.slice(0,10)));}
-});
+document.getElementById("themeToggle").onclick=function(){isDark=!isDark;localStorage.setItem("bpss_dark",isDark?"1":"0");applyTheme();};
+var dlCount=parseInt(localStorage.getItem("bpss_dl_count")||"0");
+document.getElementById("counter").textContent=dlCount>0?dlCount+" descargas":"";
+window.addEventListener("DOMContentLoaded",function(){var h=JSON.parse(localStorage.getItem("bpss_h")||"[]");if(h.length)document.getElementById("history").innerHTML="<div class=\"history\"><div class=\"history-header\"><p class=\"history-title\">Recientes</p><button class=\"clear-history\" onclick=\"clearHistory()\">Limpiar</button></div>"+h.slice(0,4).map(function(u){return "<p class=\"history-item\">"+u+"</p>"}).join("")+"</div>";});
+function clearHistory(){localStorage.removeItem("bpss_h");document.getElementById("history").innerHTML="";}
+document.getElementById("dlForm").addEventListener("submit",function(){var u=document.getElementById("urlInput").value;if(u){var h=JSON.parse(localStorage.getItem("bpss_h")||"[]");h.unshift(u);localStorage.setItem("bpss_h",JSON.stringify(h.slice(0,10)));}});
 var chatHistory=[];var lastError=null;
-function addMsg(who,text){var d=document.createElement('div');d.className='msg '+(who==='user'?'user':'bot');d.textContent=text;document.getElementById('chatMsgs').appendChild(d);document.getElementById('chatMsgs').scrollTop=99999;}
-function showSugs(sugs){var el=document.getElementById('suggestions');if(!sugs||!sugs.length){el.innerHTML='';return;}el.innerHTML='<div class="sug-list">'+sugs.map(function(s){return '<button class="sug-btn" onclick="document.getElementById(\'chatInput\').value=this.textContent;sendChat();">'+s+'</button>'}).join('')+'</div>';}
-function sendChat(){
-var inp=document.getElementById('chatInput');var msg=inp.value.trim();if(!msg)return;
-addMsg('user',msg);inp.value='';chatHistory.push({role:'user',content:msg});
-document.getElementById('suggestions').innerHTML='';
-var ld=document.createElement('div');ld.className='msg bot loading';ld.textContent='...';document.getElementById('chatMsgs').appendChild(ld);document.getElementById('chatMsgs').scrollTop=99999;
-fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory,last_error:lastError})})
-.then(function(r){return r.json()}).then(function(d){ld.remove();addMsg('bot',d.reply);chatHistory.push({role:'assistant',content:d.reply});showSugs(d.suggestions);})
-.catch(function(){ld.remove();addMsg('bot','Error. Intenta de nuevo.');});
-}
-document.getElementById('chatSend').onclick=sendChat;
-document.getElementById('chatInput').onkeydown=function(e){if(e.key==='Enter')sendChat();};
-document.getElementById('clearChat').onclick=function(){chatHistory=[];document.getElementById('chatMsgs').innerHTML='';document.getElementById('suggestions').innerHTML='';};
+function sendChat(){var inp=document.getElementById("chatInput");var m=inp.value.trim();if(!m)return;inp.value="";chatHistory.push({role:"user",content:m});addMsg(m,"user");fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m,history:chatHistory.slice(-10),last_error:lastError})}).then(function(r){return r.json()}).then(function(d){addMsg(d.reply,"bot");chatHistory.push({role:"assistant",content:d.reply});showSugs(d.suggestions)});}
+function addMsg(t,role){var el=document.getElementById("chatMsgs");var p=document.createElement("p");p.className="msg "+role;p.textContent=t;el.appendChild(p);el.scrollTop=el.scrollHeight;}
+function showSugs(s){var a=document.getElementById("sugArea");if(!s||!s.length){a.innerHTML="";return;}a.innerHTML="<div class=\"sug-list\">"+s.map(function(x){return "<button class=\"sug-btn\" onclick=\"useSug(this)\">"+x+"</button>"}).join("")+"</div>";}
+function useSug(b){document.getElementById("chatInput").value=b.textContent;sendChat();}
+function clearChat(){chatHistory=[];document.getElementById("chatMsgs").innerHTML="";document.getElementById("sugArea").innerHTML="";}
+document.getElementById("chatInput").addEventListener("keydown",function(e){if(e.key==="Enter")sendChat();});
 </script>
-<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);text-align:left"><p style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem">FAQ</p><p style="font-size:.7rem;color:var(--muted);margin-bottom:.3rem"><strong>Es gratis?</strong> Si, 100% gratis y sin registro.</p><p style="font-size:.7rem;color:var(--muted);margin-bottom:.3rem"><strong>Que calidad?</strong> Video hasta 4K, audio MP3 192kbps.</p><p style="font-size:.7rem;color:var(--muted)"><strong>Funciona con videos privados?</strong> No, solo videos publicos.</p></div><div style="margin-top:1rem;text-align:center"><span style="font-size:.65rem;color:var(--muted)">Compartir:</span> <a href="https://wa.me/?text=Descarga%20videos%20sin%20marca%20de%20agua%3A%20https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">WhatsApp</a><a href="https://t.me/share/url?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">Telegram</a><a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">X</a></div><div style="margin-top:1rem;padding-top:.5rem;border-top:1px solid var(--border);text-align:center;font-size:.6rem;color:var(--muted)"><a href="/" style="color:var(--muted);text-decoration:none">Inicio</a> - <a href="/sobre" style="color:var(--muted);text-decoration:none">Sobre</a> - <a href="/sitemap.xml" style="color:var(--muted);text-decoration:none">Sitemap</a></div></body>
+</body>
 </html>
