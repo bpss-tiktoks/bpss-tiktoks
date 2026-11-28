@@ -3,52 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Descargar Videos TikTok, Instagram, Facebook, X sin Marca de Agua - Bpss TikToks</title>
-<meta name="description" content="Descarga videos en alta resolucion (4K) de TikTok, Instagram, Facebook y X sin marca de agua. Gratis, rapido y sin registro.">
+<title>Bpss TikToks - Descargar video en alta definición</title>
+<meta name="description" content="Descargar video en alta definición sin marca de agua de TikTok, Instagram, Facebook y X. Gratis y sin registro.">
 <meta property="og:title" content="Bpss TikToks">
-<meta property="og:description" content="Descarga videos en alta resolucion sin marca de agua. Gratis.">
+<meta property="og:description" content="Descargar video en alta definición sin marca de agua.">
 <meta property="og:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
 <meta property="og:url" content="https://bpss-tiktoks.onrender.com">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_ES">
 <meta property="og:site_name" content="Bpss TikToks">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Bpss TikToks - Descarga sin Marca de Agua">
-<meta name="twitter:description" content="Descarga videos en alta resolucion sin marca de agua. Gratis.">
+<meta name="twitter:title" content="Bpss TikToks - Descargar video en alta definición">
+<meta name="twitter:description" content="Descargar video en alta definición sin marca de agua.">
 <meta name="twitter:image" content="https://bpss-tiktoks.onrender.com/static/logo.png">
 <link rel="icon" type="image/png" href="/static/logo.png">
 <link rel="apple-touch-icon" href="/static/logo.png">
 <link rel="canonical" href="https://bpss-tiktoks.onrender.com/">
 <link rel="stylesheet" href="/static/style.css">
+<style>
+.mode-group{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.mode-btn{padding:10px 8px;border-radius:10px;border:1px solid var(--border);background:transparent;color:inherit;font-weight:600;cursor:pointer;transition:.15s;}
+.mode-btn.active{background:rgba(168,85,247,0.22);border-color:#a855f7;color:#fff;}
+.submit-main{width:100%;padding:12px 16px;border-radius:10px;border:none;background:#9333ea;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;}
+.submit-main:hover{background:#7e22ce;}
+</style>
 </head>
 <body>
 <button class="theme-toggle" id="themeToggle" title="Tema">&#9789;</button>
 <div class="container">
-<a href="/" style="text-decoration:none;color:inherit;"><img src="/static/logo.png" alt="bpss..tiktok" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin:0 auto 8px;display:block;border:1px solid rgba(168,85,247,0.45);"><h1>Bpss TikToks</h1></a>
-<p class="sub">TikTok &middot; Instagram &middot; Facebook &middot; X</p>
-<p class="desc">Descarga videos, fotos y fotos animadas en MP4 HD sin marca de agua. Gratis, sin registro.</p>
-<div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega la URL del video</p><p>2. Elige Video o Audio</p><p>3. Descarga en maxima calidad</p></div>
+<a href="/" style="text-decoration:none;color:inherit;"><img src="/static/logo.png" alt="Bpss TikToks" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin:0 auto 8px;display:block;border:1px solid rgba(168,85,247,0.45);"><h1>Bpss TikToks</h1></a>
+<p class="sub">Descargar video en alta definición</p>
+<p class="desc">TikTok &middot; Instagram &middot; Facebook &middot; X sin marca de agua. Gratis y sin registro.</p>
+<div style="text-align:left;margin-bottom:1rem;font-size:.7rem;color:var(--muted)"><p style="margin-bottom:.3rem"><strong>Como funciona:</strong></p><p>1. Pega el enlace del contenido</p><p>2. Elige Video, Fotos o Audio</p><p>3. Pulsa Descargar</p></div>
 <p class="counter" id="counter"></p>
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
 <form id="dlForm" method="POST" action="/">
-<input type="text" id="urlInput" name="url" placeholder="Pega la URL de video, foto o animada aqui..." required>
-<div class="btns">
-<button type="submit" name="type" value="video">Video</button>
-<button type="submit" name="type" value="audio">Audio</button>
+<input type="text" id="urlInput" name="url" placeholder="Pega aquí el enlace de video, foto o audio..." required>
+<input type="hidden" id="modeInput" name="type" value="video">
+<div class="mode-group" role="group" aria-label="Tipo de descarga">
+<button type="button" class="mode-btn active" data-mode="video" onclick="selectMode('video',this)">Video</button>
+<button type="button" class="mode-btn" data-mode="photo" onclick="selectMode('photo',this)">Fotos</button>
+<button type="button" class="mode-btn" data-mode="audio" onclick="selectMode('audio',this)">Audio</button>
 </div>
+<button type="submit" class="submit-main">Descargar</button>
 </form>
 <div id="history"></div>
 <div class="chat-box">
 <div class="chat-header"><span class="chat-title"><span style="display:inline-flex;align-items:center;gap:8px;"><img src="/static/bot.png" alt="Bot" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid rgba(192,132,252,0.6);">ChatBot</span></span></div>
 <div id="chatMsgs"></div>
 <div class="suggestions" id="sugArea"></div>
-<div class="chat-input"><input type="text" id="chatInput" placeholder="Escribe aqui..."><button onclick="sendChat()">Enviar</button></div>
+<div class="chat-input"><input type="text" id="chatInput" placeholder="Escribe aquí..."><button onclick="sendChat()">Enviar</button></div>
 </div>
 
-<div style="margin-top:1rem;text-align:center"><span style="font-size:.65rem;color:var(--muted)">Compartir:</span> <a href="https://wa.me/?text=Descarga%20videos%20sin%20marca%20de%20agua%3A%20https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">WhatsApp</a><a href="https://t.me/share/url?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">Telegram</a></div>
+<div style="margin-top:1rem;text-align:center"><span style="font-size:.65rem;color:var(--muted)">Compartir:</span> <a href="https://wa.me/?text=Descarga%20videos%20en%20alta%20definici%C3%B3n%3A%20https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">WhatsApp</a><a href="https://t.me/share/url?url=https%3A%2F%2Fbpss-tiktoks.onrender.com" target="_blank" class="btn-action" style="margin:.2rem">Telegram</a></div>
 <div style="margin-top:1rem;padding-top:.5rem;border-top:1px solid var(--border);text-align:center;font-size:.6rem;color:var(--muted)"><a href="/" style="color:var(--muted);text-decoration:none">Inicio</a> &middot; <a href="/sobre" style="color:var(--muted);text-decoration:none">Sobre</a> &middot; <a href="/sitemap.xml" style="color:var(--muted);text-decoration:none">Sitemap</a></div>
 </div>
 <script>
+function selectMode(mode,btn){
+  document.getElementById("modeInput").value=mode;
+  var buttons=document.querySelectorAll(".mode-btn");
+  for(var i=0;i<buttons.length;i++){buttons[i].classList.remove("active");}
+  if(btn){btn.classList.add("active");}
+}
 var isDark=localStorage.getItem("bpss_dark")==="1";
 function applyTheme(){document.body.classList.toggle("dark",isDark);document.getElementById("themeToggle").textContent=isDark?String.fromCharCode(9728):String.fromCharCode(9790);}
 applyTheme();
