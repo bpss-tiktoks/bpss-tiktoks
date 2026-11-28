@@ -3,3 +3,8 @@ __pycache__/
 downloads/
 cookies.txt
 *.log
+*.bak*
+diagnostico_*.txt
+salida_*.txt
+todo_codigo.txt
+*_video.mp4
