@@ -117,7 +117,7 @@ def do_download(task_id, url, dtype):
         # url = url.replace('/photo/', '/video/')
 
         # TIKTOK PHOTO  gallery-dl
-        if False:  # was: is_tiktok_photo
+        if is_tiktok_photo(url):
             do_gallery_dl(task_id, url, dtype, platform)
             return
 
