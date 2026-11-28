@@ -1,4 +1,4 @@
-import os
+﻿import os
 from flask import Flask, jsonify, request, render_template_string
 import yt_dlp
 
@@ -232,7 +232,7 @@ HTML_PAGE = """<!DOCTYPE html>
         <div>
           <label for="quality">Calidad</label>
           <select id="quality">
-            <option value="best" selected>Máxima disponible</option>
+            <option value="best" selected>MÃ¡xima disponible</option>
             <option value="1080p">1080p</option>
             <option value="720p">720p</option>
           </select>
@@ -281,7 +281,7 @@ HTML_PAGE = """<!DOCTYPE html>
         }
       } catch (_) {}
       dot.className = 'dot offline';
-      txt.textContent = 'Sin conexión';
+      txt.textContent = 'Sin conexiÃ³n';
     }
 
     async function runAction(endpoint) {
@@ -291,7 +291,7 @@ HTML_PAGE = """<!DOCTYPE html>
       const out = document.getElementById('out');
 
       if (!url) {
-        out.textContent = 'Ingresa una URL válida primero.';
+        out.textContent = 'Ingresa una URL vÃ¡lida primero.';
         return;
       }
 
@@ -384,3 +384,35 @@ def download_media():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
+# --- ENRUTAMIENTO AUTOMATICO ENTRE SERVIDORES (LOCAL PESADO / RENDER LIVIANO) ---
+import os
+import urllib.request
+import urllib.error
+
+LOCAL_NODE_URL = os.environ.get("LOCAL_NODE_URL", "http://127.0.0.1:5000").rstrip("/")
+RENDER_NODE_URL = os.environ.get("RENDER_NODE_URL", "https://bpss-tiktoks.onrender.com").rstrip("/")
+IS_RENDER = bool(os.environ.get("RENDER"))
+
+def _nodo_local_disponible(timeout=1.2):
+    if IS_RENDER:
+        return False
+    try:
+        with urllib.request.urlopen(f"{LOCAL_NODE_URL}/healthz", timeout=timeout) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+def elegir_servidor_automatico(media_type="video", es_pesada=True):
+    """Elige automaticamente el nodo sin mostrarlo al usuario:
+    - Peticiones pesadas (audio o descarga con FFmpeg/yt-dlp): prioriza PC Local si esta activa, con respaldo en Render.
+    - Peticiones livianas: usa el nodo actual o Render si esta disponible.
+    """
+    local_ok = _nodo_local_disponible()
+    if es_pesada or media_type == "audio":
+        if local_ok:
+            return "local", LOCAL_NODE_URL
+        return "render", RENDER_NODE_URL
+    if not IS_RENDER and local_ok:
+        return "local", LOCAL_NODE_URL
+    return "render", RENDER_NODE_URL
+# --- FIN ENRUTAMIENTO AUTOMATICO ---
